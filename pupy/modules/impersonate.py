@@ -30,7 +30,6 @@ class ImpersonateModule(PupyModule):
             sids = ListSids()
 
             process_table = []
-            sids_table = []
             sids_dict = {}
 
             for (pid, process, sid, username) in sids:
@@ -43,18 +42,14 @@ class ImpersonateModule(PupyModule):
 
                 sids_dict[sid] = username
 
-            for sid, username in sids_dict.iteritems():
-                sids_table.append({
-                    'sid': sid,
-                    'username': username
-                })
-
-            for (sid, username) in cached:
-                sids_table.append({
-                    'sid': sid + ' (CACHED)',
-                    'username': username
-                })
-
+            sids_table = [
+                {'sid': sid, 'username': username}
+                for sid, username in sids_dict.iteritems()
+            ]
+            sids_table.extend(
+                {'sid': f'{sid} (CACHED)', 'username': username}
+                for sid, username in cached
+            )
             self.log(MultiPart([
                 Table(process_table, [
                     'pid', 'process', 'username', 'sid'
@@ -77,7 +72,7 @@ class ImpersonateModule(PupyModule):
 
                 self.client.impersonated_dupHandle = impersonate_sid_long_handle(args.impersonate, close=False)
 
-            self.success('Sid {} impersonated !'.format(args.impersonate))
+            self.success(f'Sid {args.impersonate} impersonated !')
 
         elif args.rev2self:
             rev2self = self.client.remote('pupwinutils.security', 'rev2self', False)

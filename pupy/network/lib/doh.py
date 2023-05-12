@@ -101,14 +101,11 @@ class SecureDNS(object):
             answers = []
             for answer in response['Answer']:
                 name, response_type, ttl, data = \
-                    map(answer.get, ('name', 'type', 'ttl', 'data'))
+                        map(answer.get, ('name', 'type', 'ttl', 'data'))
                 if response_type in (A, AAAA):
                     answers.append(str(data))
 
-            if answers == []:
-                return None
-
-            return answers
+            return None if not answers else answers
 
     def _prepare_hostname(self, hostname):
         '''verify the hostname is well-formed'''
@@ -127,6 +124,4 @@ class SecureDNS(object):
             raise InvalidHostName()
 
     def __repr__(self):
-        return 'SecureDNS({}, {})'.format(
-            repr(self.url), bool(self.cd)
-        )
+        return f'SecureDNS({repr(self.url)}, {bool(self.cd)})'

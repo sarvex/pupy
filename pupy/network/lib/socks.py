@@ -155,8 +155,8 @@ class AuthenticationRequired(ProxyError):
 
     def __init__(self, methods):
         super(AuthenticationRequired, self).__init__(
-            'Authentication required, supported methods: {}'.format(
-                ';'.join(methods)))
+            f"Authentication required, supported methods: {';'.join(methods)}"
+        )
         self.methods = methods
 
 
@@ -290,7 +290,7 @@ class _BaseSocket(socket.socket):
 
         self._orig_args = args
         self._orig_kwargs = kwargs
-        self._savedmethods = dict()
+        self._savedmethods = {}
         for name in self._savenames:
             self._savedmethods[name] = getattr(self, name)
             delattr(self, name)  # Allows normal overriding mechanism to work
@@ -337,10 +337,7 @@ class socksocket(_BaseSocket):
         self._proxyconn = None  # TCP connection to keep UDP relay alive
         self._last_addr = None
 
-        if self.default_proxy:
-            self.proxy = [self.default_proxy]
-        else:
-            self.proxy = []
+        self.proxy = [self.default_proxy] if self.default_proxy else []
         self.proxy_sockname = None
         self.proxy_peername = None
 
@@ -351,10 +348,10 @@ class socksocket(_BaseSocket):
         """
         data = b""
         while len(data) < count:
-            d = file.read(count - len(data))
-            if not d:
+            if d := file.read(count - len(data)):
+                data += d
+            else:
                 raise GeneralProxyError("Connection closed unexpectedly")
-            data += d
         return data
 
     def add_proxy(
@@ -382,7 +379,7 @@ class socksocket(_BaseSocket):
         if type(proxy_type) in (str, unicode):
             proxy_type = PROXY_TYPES.get(proxy_type)
             if not proxy_type:
-                raise ValueError('Unknown proxy type {}'.format(proxy_type))
+                raise ValueError(f'Unknown proxy type {proxy_type}')
 
         self.proxy.append([
             proxy_type, addr, port, rdns,
@@ -567,8 +564,7 @@ class socksocket(_BaseSocket):
                     raise EOFError('Incomplete Message')
 
         except Exception as e:
-            raise GeneralProxyError(
-                'HTTP Proxy communication error ({})'.format(e))
+            raise GeneralProxyError(f'HTTP Proxy communication error ({e})')
 
         return status_code, headers
 
@@ -636,7 +632,7 @@ class socksocket(_BaseSocket):
             writer.flush()
             chosen_auth = self._readall(reader, 2)
 
-            if chosen_auth[0:1] != b"\x05":
+            if chosen_auth[:1] != b"\x05":
                 # Note: string[i:i+1] is used because indexing of a bytestring
                 # via bytestring[i] yields an integer in Python 3
                 raise GeneralProxyError("SOCKS5 proxy server sent invalid data")
@@ -648,19 +644,18 @@ class socksocket(_BaseSocket):
                 # authentication.
                 writer.write(
                     b"\x01" + chr(len(username)).encode() + \
-                    username + chr(len(password)).encode() + password)
+                        username + chr(len(password)).encode() + password)
                 writer.flush()
                 auth_status = self._readall(reader, 2)
-                if auth_status[0:1] != b"\x01":
+                if auth_status[:1] != b"\x01":
                     # Bad response
                     raise GeneralProxyError("SOCKS5 proxy server sent invalid data")
                 if auth_status[1:2] != b"\x00":
                     # Authentication failed
                     raise SOCKS5AuthError("SOCKS5 authentication failed")
 
-                # Otherwise, authentication succeeded
+                        # Otherwise, authentication succeeded
 
-            # No authentication is required if 0x00
             elif chosen_auth[1:2] != b"\x00":
                 # Reaching here is always bad
                 if chosen_auth[1:2] == b"\xFF":
@@ -675,7 +670,7 @@ class socksocket(_BaseSocket):
 
             # Get the response
             resp = self._readall(reader, 3)
-            if resp[0:1] != b"\x05":
+            if resp[:1] != b"\x05":
                 raise GeneralProxyError("SOCKS5 proxy server sent invalid data")
 
             status = ord(resp[1:2])
@@ -797,7 +792,7 @@ class socksocket(_BaseSocket):
 
             # Get the response from the server
             resp = self._readall(reader, 8)
-            if resp[0:1] != b"\x00":
+            if resp[:1] != b"\x00":
                 # Bad data
                 raise GeneralProxyError("SOCKS4 proxy server sent invalid data")
 
@@ -852,8 +847,7 @@ class socksocket(_BaseSocket):
         if auth_type:
             if not (username and password):
                 curr_addr, curr_port = self._last_addr
-                cred = find_first_cred('http', curr_addr, curr_port)
-                if cred:
+                if cred := find_first_cred('http', curr_addr, curr_port):
                     username = cred.user
                     password = cred.password
 
@@ -874,16 +868,23 @@ class socksocket(_BaseSocket):
 
                 try:
                     _, method, payload = ctx.create_auth1_message(
-                        domain, username, password,
-                        'http://{}:{}'.format(dest_addr, dest_port), auth_type
+                        domain,
+                        username,
+                        password,
+                        f'http://{dest_addr}:{dest_port}',
+                        auth_type,
                     )
 
                 except AuthenticationError as e:
-                    raise AuthenticationImpossible('Error during SSP authentication: {}'.format(e))
+                    raise AuthenticationImpossible(f'Error during SSP authentication: {e}')
 
                 ntlm_headers = list(http_headers)
-                ntlm_headers.append(b'Proxy-Authorization: ' + ' '.join([method, payload]))
-                ntlm_headers.append(b'\r\n')
+                ntlm_headers.extend(
+                    (
+                        b'Proxy-Authorization: ' + ' '.join([method, payload]),
+                        b'\r\n',
+                    )
+                )
                 ntlm_payload = b'\r\n'.join(ntlm_headers)
 
                 conn.sendall(ntlm_payload)
@@ -895,8 +896,8 @@ class socksocket(_BaseSocket):
                 else:
                     if status_code != 407:
                         raise GeneralProxyError(
-                            'Invalid Authentication Sequence (STATUS: {})'.format(
-                                status_code))
+                            f'Invalid Authentication Sequence (STATUS: {status_code})'
+                        )
 
                     need_request = True
                     challenge = None
@@ -904,7 +905,7 @@ class socksocket(_BaseSocket):
                     for header, value in headers.iteritems():
                         if header.lower() == 'proxy-authenticate':
                             value = value.strip()
-                            if not value.startswith(method + ' '):
+                            if not value.startswith(f'{method} '):
                                 raise GeneralProxyError(
                                     'Invalid Authentication Sequence (Invalid payload)')
 
@@ -918,14 +919,13 @@ class socksocket(_BaseSocket):
                         _, method, payload = ctx.create_auth2_message(challenge)
                     except AuthenticationError as e:
                         raise AuthenticationImpossible(
-                            'Error during SSP authentication (Step 2): {}'.format(e))
+                            f'Error during SSP authentication (Step 2): {e}'
+                        )
 
                     http_headers.append('Proxy-Authorization: ' + ' '.join([method, payload]))
 
             else:
-                raise GeneralProxyError(
-                    'Unsupported authentication scheme: {}'.format(
-                        auth_type))
+                raise GeneralProxyError(f'Unsupported authentication scheme: {auth_type}')
 
         if need_request:
             http_headers.append(b'\r\n')
@@ -938,7 +938,8 @@ class socksocket(_BaseSocket):
         if status_code in (401, 407):
             if auth_type is not None:
                 raise AuthenticationImpossible(
-                    'Authentication using method {} has been failed'.format(auth_type))
+                    f'Authentication using method {auth_type} has been failed'
+                )
 
             if not username and password:
                 raise AuthenticationImpossible('Authentication required, but credentials are not provided')
@@ -991,11 +992,10 @@ class socksocket(_BaseSocket):
         except socket.error as e:
             conn.close()
 
-            proxy_server = '{}:{}'.format(proxy_host, proxy_port)
+            proxy_server = f'{proxy_host}:{proxy_port}'
             printable_type = PRINTABLE_PROXY_TYPES[proxy_type]
 
-            msg = 'Error connecting to {} proxy {}: {}'.format(
-                printable_type, proxy_server, e)
+            msg = f'Error connecting to {printable_type} proxy {proxy_server}: {e}'
 
             raise ProxyConnectionError(msg, e)
 
@@ -1180,10 +1180,10 @@ class socksocket(_BaseSocket):
         Return proxy address to connect to as tuple object
         """
         proxy_type, proxy_addr, proxy_port, _, _, _, _ = proxy
-        proxy_port = proxy_port or DEFAULT_PORTS.get(proxy_type)
-        if not proxy_port:
+        if proxy_port := proxy_port or DEFAULT_PORTS.get(proxy_type):
+            return proxy_addr, proxy_port
+        else:
             raise GeneralProxyError("Invalid proxy type")
-        return proxy_addr, proxy_port
 
     def _setkeepalive(self, conn=None):
         if conn is None:

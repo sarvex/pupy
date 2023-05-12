@@ -26,7 +26,7 @@ class LauncherArgumentParser(argparse.ArgumentParser):
         raise LauncherError(message)
 
     def error(self, message):
-        self.exit(2, str('%s: error: %s\n') % (self.prog, message))
+        self.exit(2, '%s: error: %s\n' % (self.prog, message))
 
 
 class BaseLauncherMetaclass(type):

@@ -37,16 +37,15 @@ class contacts(PupyModule):
         contacts2 = copy.copy(contacts)
         contacts = contacts2
         self.success("Saving contacts {0} contacts...".format(len(contacts)))
-        f = open(completePath, 'w', 1)
-        for aContact in contacts:
-            self.info("Saving the contact: {0}".format(aContact))
-            f.write("********** id: {0} **********\n".format(aContact['id']))
-            f.write("name: {0}\n".format(aContact['name']))
-            for aPhoneNb,aPhoneNbType in zip(aContact['phoneNbs'],aContact['phoneNbsTypes']):
-                f.write("phone ({0}): {1}\n".format(aPhoneNbType, aPhoneNb))
-            for anEmail in aContact['emails']:
-                f.write("email: {0}\n".format(anEmail))
-            for aPostalAddress in aContact['postalAddresses']:
-                f.write("postalAddr: {0}\n".format(aPostalAddress))
-        f.close()
+        with open(completePath, 'w', 1) as f:
+            for aContact in contacts:
+                self.info("Saving the contact: {0}".format(aContact))
+                f.write("********** id: {0} **********\n".format(aContact['id']))
+                f.write("name: {0}\n".format(aContact['name']))
+                for aPhoneNb,aPhoneNbType in zip(aContact['phoneNbs'],aContact['phoneNbsTypes']):
+                    f.write("phone ({0}): {1}\n".format(aPhoneNbType, aPhoneNb))
+                for anEmail in aContact['emails']:
+                    f.write("email: {0}\n".format(anEmail))
+                for aPostalAddress in aContact['postalAddresses']:
+                    f.write("postalAddr: {0}\n".format(aPostalAddress))
         self.success("Contacts saved in {0}".format(completePath))

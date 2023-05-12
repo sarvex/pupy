@@ -52,16 +52,16 @@ class MigrateModule(PupyModule):
                     try:
                         listeningPort = int(input("[?] Give me the listening port to use on the target: "))
                     except Exception as e:
-                        self.warning("You have to give me a valid port. Try again. ({})".format(e))
+                        self.warning(f"You have to give me a valid port. Try again. ({e})")
                 self.success("After migration, the launcher will listen on the port {0} of the target".format(listeningPort))
             pid=None
             if args.create:
                 self.success("Migrating to new windows process")
                 p=self.client.conn.modules['pupwinutils.processes'].start_hidden_process(args.create)
                 pid=p.pid
-                self.success("%s created with pid %s"%(args.create,pid))
+                self.success(f"{args.create} created with pid {pid}")
             elif args.process:
-                self.success("Looking for process %s"%args.process)
+                self.success(f"Looking for process {args.process}")
                 pstree = self.client.remote('pupyps', 'pstree')
                 root, tree, data = pstree()
                 for k,v in data.iteritems():
@@ -70,7 +70,9 @@ class MigrateModule(PupyModule):
                         continue
                     if args.process.lower() in proc.lower():
                         pid=int(k)
-                        self.success("Migrating to existing windows process {} identified with the pid {}".format(proc, pid))
+                        self.success(
+                            f"Migrating to existing windows process {proc} identified with the pid {pid}"
+                        )
                         break
             else:
                 self.success("Migrating to existing windows process identified with the pid {0}".format(args.pid))

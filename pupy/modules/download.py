@@ -62,7 +62,7 @@ class DownloaderScript(PupyModule):
             obj = self.client.remote('transfer')
             count, size = self._downloader.du(args.remote_file, obj)
             if count is not None and size is not None:
-                self.success('Files: {} Size: {}'.format(count, size_human_readable(size)))
+                self.success(f'Files: {count} Size: {size_human_readable(size)}')
         else:
             self._downloader.download(
                 args.remote_file,
@@ -72,12 +72,12 @@ class DownloaderScript(PupyModule):
             )
 
             if args.verbose:
-                self.info('Destination folder: {}'.format(self._downloader.dest_file))
+                self.info(f'Destination folder: {self._downloader.dest_file}')
 
             if args.open and path.exists(self._downloader.dest_file):
                 viewer = self.config.get('default_viewers', 'xdg_open') or 'xdg-open'
                 if args.verbose:
-                    self.info('Open file {} with {}'.format(self._downloader.dest_file, viewer))
+                    self.info(f'Open file {self._downloader.dest_file} with {viewer}')
                 with open(devnull, 'w') as DEVNULL:
                     Popen(
                         [viewer, self._downloader.dest_file],

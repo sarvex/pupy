@@ -18,10 +18,13 @@ def do(server, handler, config, args):
     if args.module:
         if handler.commands.has(args.module):
             command = handler.commands.get(args.module)
-            tables.append(Line(
-                Color('Command:', 'yellow'),
-                Color(args.module+':', 'green'),
-                command.usage or 'No description'))
+            tables.append(
+                Line(
+                    Color('Command:', 'yellow'),
+                    Color(f'{args.module}:', 'green'),
+                    command.usage or 'No description',
+                )
+            )
             if hasattr(command.parser, 'add_help'):
                 tables.append(command.parser.format_help())
             else:
@@ -30,23 +33,21 @@ def do(server, handler, config, args):
 
         for module in server.iter_modules():
             if module.get_name().lower() == args.module.lower():
-                if module.__doc__:
-                    doc = module.__doc__.strip()
-                else:
-                    doc = ''
-
-                tables.append(Line(
-                    Color('Module:', 'yellow'),
-                    Color(args.module+':', 'green'),
-                    doc.title().split('\n')[0]))
+                doc = module.__doc__.strip() if module.__doc__ else ''
+                tables.append(
+                    Line(
+                        Color('Module:', 'yellow'),
+                        Color(f'{args.module}:', 'green'),
+                        doc.title().split('\n')[0],
+                    )
+                )
 
                 if module.arg_parser.add_help:
                     tables.append(module.arg_parser.format_help())
                 else:
                     tables.append(module.arg_parser.parse_args(['--help']))
 
-                clients = server.get_clients(handler.default_filter)
-                if clients:
+                if clients := server.get_clients(handler.default_filter):
                     ctable = []
                     for client in clients:
                         compatible = module.is_compatible_with(client)
@@ -64,21 +65,20 @@ def do(server, handler, config, args):
                     tables.append(
                         Table(ctable, ['OK', 'CLIENT'], Color('Compatibility', 'yellow'), False))
 
-        for command, alias in config.items("aliases"):
-            if command == args.module:
-                tables.append(Line(
-                    Color('Alias:', 'yellow'),
-                    Color(args.module+':', 'green'),
-                    alias))
-
+        tables.extend(
+            Line(
+                Color('Alias:', 'yellow'),
+                Color(f'{args.module}:', 'green'),
+                alias,
+            )
+            for command, alias in config.items("aliases")
+            if command == args.module
+        )
     else:
-        commands = []
-        for command, description in handler.commands.list():
-            commands.append({
-                'COMMAND': command,
-                'DESCRIPTION': description
-            })
-
+        commands = [
+            {'COMMAND': command, 'DESCRIPTION': description}
+            for command, description in handler.commands.list()
+        ]
         tables.append(Table(commands, ['COMMAND', 'DESCRIPTION'], Color('COMMANDS', 'yellow')))
 
         if args.modules:
@@ -94,11 +94,7 @@ def do(server, handler, config, args):
                     mod.is_compatible_with(client) for client in
                     server.get_clients(handler.default_filter))
 
-                if mod.__doc__:
-                    doc = mod.__doc__.strip()
-                else:
-                    doc = ''
-
+                doc = mod.__doc__.strip() if mod.__doc__ else ''
                 category = mod.category
                 name = mod.get_name()
                 brief = doc.title().split('\n')[0]
@@ -123,25 +119,16 @@ def do(server, handler, config, args):
             tables.append(TruncateToTerm(Table(
                 table, ['CATEGORY', 'NAME', 'HELP'], Color('MODULES', 'yellow'))))
 
-        else:
-            aliased = []
-            for module, description in server.get_aliased_modules():
-                aliased.append({
-                    'MODULE': module,
-                    'DESCRIPTION': description
-                })
+        elif aliased := [
+            {'MODULE': module, 'DESCRIPTION': description}
+            for module, description in server.get_aliased_modules()
+        ]:
+            tables.append(Table(aliased, ['MODULE', 'DESCRIPTION'], Color('ALIASED MODULES', 'yellow')))
 
-            if aliased:
-                tables.append(Table(aliased, ['MODULE', 'DESCRIPTION'], Color('ALIASED MODULES', 'yellow')))
-
-        aliases = []
-        for command, alias in config.items("aliases"):
-            aliases.append({
-                'ALIAS': command,
-                'COMMAND': alias
-            })
-
-        if aliases:
+        if aliases := [
+            {'ALIAS': command, 'COMMAND': alias}
+            for command, alias in config.items("aliases")
+        ]:
             tables.append(Table(aliases, ['ALIAS', 'COMMAND'], Color('ALIASES', 'yellow')))
 
         if not args.modules:

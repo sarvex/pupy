@@ -29,7 +29,7 @@ class PythonExec(PupyModule):
     def run(self, args):
         code=""
         if args.file:
-            self.info("loading code from %s ..."%args.file)
+            self.info(f"loading code from {args.file} ...")
             with open(args.file,'r') as f:
                 code=f.read()
         elif args.code:

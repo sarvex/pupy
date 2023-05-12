@@ -88,9 +88,8 @@ class Ext:
         >>>
         """
         # Application ext type should be 0 <= type <= 127
-        if not isinstance(type, int) or not (type >= 0 and type <= 127):
+        if not isinstance(type, int) or type < 0 or type > 127:
             raise TypeError("ext type out of range")
-        # Check data is type bytes
         elif sys.version_info[0] == 3 and not isinstance(data, bytes):
             raise TypeError("ext data is not type \'bytes\'")
         elif sys.version_info[0] == 2 and not isinstance(data, str):
@@ -247,19 +246,18 @@ def _pack_integer(obj, fp, options):
             fp.write(b"\xd3" + struct.pack(">q", obj))
         else:
             raise UnsupportedTypeException("huge signed int")
+    elif obj <= 127:
+        fp.write(struct.pack("B", obj))
+    elif obj <= 2**8 - 1:
+        fp.write(b"\xcc" + struct.pack("B", obj))
+    elif obj <= 2**16 - 1:
+        fp.write(b"\xcd" + struct.pack(">H", obj))
+    elif obj <= 2**32 - 1:
+        fp.write(b"\xce" + struct.pack(">I", obj))
+    elif obj <= 2**64 - 1:
+        fp.write(b"\xcf" + struct.pack(">Q", obj))
     else:
-        if obj <= 127:
-            fp.write(struct.pack("B", obj))
-        elif obj <= 2**8 - 1:
-            fp.write(b"\xcc" + struct.pack("B", obj))
-        elif obj <= 2**16 - 1:
-            fp.write(b"\xcd" + struct.pack(">H", obj))
-        elif obj <= 2**32 - 1:
-            fp.write(b"\xce" + struct.pack(">I", obj))
-        elif obj <= 2**64 - 1:
-            fp.write(b"\xcf" + struct.pack(">Q", obj))
-        else:
-            raise UnsupportedTypeException("huge unsigned int")
+        raise UnsupportedTypeException("huge unsigned int")
 
 
 def _pack_nil(obj, fp, options):
@@ -419,7 +417,7 @@ def _pack2(obj, fp, **options):
         _pack_ext(ext_handlers[obj.__class__](obj), fp, options)
     elif isinstance(obj, bool):
         _pack_boolean(obj, fp, options)
-    elif isinstance(obj, int) or isinstance(obj, long):
+    elif isinstance(obj, (int, long)):
         _pack_integer(obj, fp, options)
     elif isinstance(obj, float):
         _pack_float(obj, fp, options)
@@ -431,22 +429,21 @@ def _pack2(obj, fp, **options):
         _pack_string(obj, fp, options)
     elif isinstance(obj, str):
         _pack_binary(obj, fp, options)
-    elif isinstance(obj, list) or isinstance(obj, tuple):
+    elif isinstance(obj, (list, tuple)):
         _pack_array(obj, fp, options)
     elif isinstance(obj, dict):
         _pack_map(obj, fp, options)
     elif isinstance(obj, Ext):
         _pack_ext(obj, fp, options)
     elif ext_handlers:
-        # Linear search for superclass
-        t = next((t for t in ext_handlers.keys() if isinstance(obj, t)), None)
-        if t:
+        if t := next(
+            (t for t in ext_handlers.keys() if isinstance(obj, t)), None
+        ):
             _pack_ext(ext_handlers[t](obj), fp, options)
         else:
-            raise UnsupportedTypeException(
-                "unsupported type: %s" % str(type(obj)))
+            raise UnsupportedTypeException(f"unsupported type: {str(type(obj))}")
     else:
-        raise UnsupportedTypeException("unsupported type: %s" % str(type(obj)))
+        raise UnsupportedTypeException(f"unsupported type: {str(type(obj))}")
 
 
 # Pack for Python 3, with unicode 'str' type, 'bytes' type, and no 'long' type
@@ -501,23 +498,21 @@ def _pack3(obj, fp, **options):
         _pack_string(obj, fp, options)
     elif isinstance(obj, bytes):
         _pack_binary(obj, fp, options)
-    elif isinstance(obj, list) or isinstance(obj, tuple):
+    elif isinstance(obj, (list, tuple)):
         _pack_array(obj, fp, options)
     elif isinstance(obj, dict):
         _pack_map(obj, fp, options)
     elif isinstance(obj, Ext):
         _pack_ext(obj, fp, options)
     elif ext_handlers:
-        # Linear search for superclass
-        t = next((t for t in ext_handlers.keys() if isinstance(obj, t)), None)
-        if t:
+        if t := next(
+            (t for t in ext_handlers.keys() if isinstance(obj, t)), None
+        ):
             _pack_ext(ext_handlers[t](obj), fp, options)
         else:
-            raise UnsupportedTypeException(
-                "unsupported type: %s" % str(type(obj)))
+            raise UnsupportedTypeException(f"unsupported type: {str(type(obj))}")
     else:
-        raise UnsupportedTypeException(
-            "unsupported type: %s" % str(type(obj)))
+        raise UnsupportedTypeException(f"unsupported type: {str(type(obj))}")
 
 
 def _packb2(obj, **options):
@@ -730,12 +725,12 @@ def _unpack_array(code, fp, options):
     else:
         raise Exception("logic error, not array: 0x%02x" % ord(code))
 
-    return [_unpack(fp, options) for i in xrange(length)]
+    return [_unpack(fp, options) for _ in xrange(length)]
 
 
 def _deep_list_to_tuple(obj):
     if isinstance(obj, list):
-        return tuple([_deep_list_to_tuple(e) for e in obj])
+        return tuple(_deep_list_to_tuple(e) for e in obj)
     return obj
 
 
@@ -760,10 +755,12 @@ def _unpack_map(code, fp, options):
             k = _deep_list_to_tuple(k)
         elif not isinstance(k, collections.Hashable):
             raise UnhashableKeyException(
-                "encountered unhashable key: %s, %s" % (str(k), str(type(k))))
+                f"encountered unhashable key: {str(k)}, {str(type(k))}"
+            )
         elif k in d:
             raise DuplicateKeyException(
-                "encountered duplicate key: %s, %s" % (str(k), str(type(k))))
+                f"encountered duplicate key: {str(k)}, {str(type(k))}"
+            )
 
         # Unpack value
         v = _unpack(fp, options)
@@ -771,8 +768,7 @@ def _unpack_map(code, fp, options):
         try:
             d[k] = v
         except TypeError:
-            raise UnhashableKeyException(
-                "encountered unhashable key: %s" % str(k))
+            raise UnhashableKeyException(f"encountered unhashable key: {str(k)}")
     return d
 
 
@@ -981,11 +977,7 @@ def __init():
     compatibility = False
 
     # Auto-detect system float precision
-    if sys.float_info.mant_dig == 53:
-        _float_precision = "double"
-    else:
-        _float_precision = "single"
-
+    _float_precision = "double" if sys.float_info.mant_dig == 53 else "single"
     # Map packb and unpackb to the appropriate version
     if sys.version_info[0] == 3:
         pack = _pack3
@@ -1007,12 +999,9 @@ def __init():
         load = _unpack2
         loads = _unpackb2
 
-    # Build a dispatch table for fast lookup of unpacking function
-
-    _unpack_dispatch_table = {}
-    # Fix uint
-    for code in range(0, 0x7f + 1):
-        _unpack_dispatch_table[struct.pack("B", code)] = _unpack_integer
+    _unpack_dispatch_table = {
+        struct.pack("B", code): _unpack_integer for code in range(0, 0x7F + 1)
+    }
     # Fix map
     for code in range(0x80, 0x8f + 1):
         _unpack_dispatch_table[struct.pack("B", code)] = _unpack_map

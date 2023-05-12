@@ -578,7 +578,7 @@ class PortQuiz(threading.Thread):
         self.opener.add_handler(urllib2.HTTPHandler())
         self.http_timeout = http_timeout
         self.connect_timeout = connect_timeout
-        self.available = list()
+        self.available = []
 
         if portquiz is not None:
             self.hostname = portquiz
@@ -641,9 +641,7 @@ class PortQuiz(threading.Thread):
         logger.debug('Scan other ports')
 
         if len(self.available) < self.amount:
-            other = list([
-                x for x in scan.TOP1000 if x not in most_important
-            ])
+            other = [x for x in scan.TOP1000 if x not in most_important]
 
             random.shuffle(other)
 

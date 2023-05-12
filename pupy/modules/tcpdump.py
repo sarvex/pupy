@@ -29,9 +29,7 @@ class TcpdumpModule(PupyModule):
 
     @classmethod
     def init_argparse(cls):
-        example = 'Example:\n'
-        example += '>> tcpdump -i eth0 --bpf tcp.port==80 -s\n'
-
+        example = 'Example:\n' + '>> tcpdump -i eth0 --bpf tcp.port==80 -s\n'
         cls.arg_parser = PupyArgumentParser(prog='tcpdump.py', description=cls.__doc__, epilog=example)
         cls.arg_parser.add_argument("-s", "--save-pcap", action="store_true", help="save to a pcap file")
         cls.arg_parser.add_argument("--count", type=int, default=0, help="sniff at max n packets")
@@ -60,7 +58,7 @@ class TcpdumpModule(PupyModule):
 
     def on_error(self, error=None):
         if error:
-            self.error('Scapy error: {}'.format(error))
+            self.error(f'Scapy error: {error}')
 
         self.wait.set()
 
@@ -93,12 +91,12 @@ class TcpdumpModule(PupyModule):
                 args.timeout,
                 count=args.count)
 
-            self.success(u'Scapy tcpdump on "{}" - started'.format(name))
+            self.success(f'Scapy tcpdump on "{name}" - started')
             self.wait.wait()
-            self.success(u'Scapy tcpdump on "{}" - completed'.format(name))
+            self.success(f'Scapy tcpdump on "{name}" - completed')
 
             if filepath:
-                self.info('Pcap stored to: {}'.format(filepath))
+                self.info(f'Pcap stored to: {filepath}')
 
         except Exception as e:
             self.wait.set()

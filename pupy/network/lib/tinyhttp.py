@@ -107,8 +107,7 @@ class ProxyPasswordManager(object):
             return self.username, self.password
 
         elif self.schema and self.host and self.port:
-            cred = find_first_cred(self.schema, self.host, self.port)
-            if cred:
+            if cred := find_first_cred(self.schema, self.host, self.port):
                 return cred.user, cred.password
 
         return None, None
@@ -300,11 +299,11 @@ class TCPReaderHandler(urllib2.BaseHandler):
                 conn.send(url.path[1:])
 
             while True:
-                b = conn.recv(65535)
-                if not b:
-                    break
+                if b := conn.recv(65535):
+                    data.append(b)
 
-                data.append(b)
+                else:
+                    break
 
             if not data:
                 raise ValueError('No data')
@@ -356,20 +355,17 @@ class SocksiPyConnectionS(StreamingHTTPSConnection):
         httplib.HTTPSConnection.__init__(self, *args, **kwargs)
 
     def connect(self):
-        if self.sock is None:
-            sock = socksocket()
-            sock.setproxy(*self.proxyargs)
-            if type(self.timeout) in (int, float):
-                sock.settimeout(self.timeout)
-            sock.connect((self.host, self.port))
+        if self.sock is not None:
+            return
+        sock = socksocket()
+        sock.setproxy(*self.proxyargs)
+        if type(self.timeout) in (int, float):
+            sock.settimeout(self.timeout)
+        sock.connect((self.host, self.port))
 
-            if self._tunnel_host:
-                server_hostname = self._tunnel_host
-            else:
-                server_hostname = self.host
-
-            self.sock = self._context.wrap_socket(
-                sock, server_hostname=server_hostname)
+        server_hostname = self._tunnel_host if self._tunnel_host else self.host
+        self.sock = self._context.wrap_socket(
+            sock, server_hostname=server_hostname)
 
 class SocksiPyHandler(urllib2.HTTPHandler, urllib2.HTTPSHandler, TCPReaderHandler):
     __slots__ = ('args', 'kw')
@@ -441,15 +437,17 @@ class HTTP(object):
             if scheme == 'SOCKS':
                 scheme = 'SOCKS5'
 
-            self.proxy = scheme, proxyscheme.hostname+(
-                ':'+str(proxyscheme.port) if proxyscheme.port else ''), \
-                proxyscheme.username or None, \
-                proxyscheme.password or None
+            self.proxy = (
+                scheme,
+                (
+                    proxyscheme.hostname
+                    + (f':{str(proxyscheme.port)}' if proxyscheme.port else '')
+                ),
+                proxyscheme.username or None,
+                proxyscheme.password or None,
+            )
         elif proxy in (True, None):
-            if has_wpad():
-                self.proxy = 'wpad'
-            else:
-                self.proxy = find_default_proxy()
+            self.proxy = 'wpad' if has_wpad() else find_default_proxy()
         elif hasattr(proxy, 'as_tuple'):
             self.proxy = proxy.as_tuple()
         else:
@@ -470,11 +468,10 @@ class HTTP(object):
         if self.no_proxy_locals and self._is_local_network(address):
             return True
 
-        if self.no_proxy_for and urlparse.urlparse(
-                address).hostname in self.no_proxy_for:
-            return True
-
-        return False
+        return bool(
+            self.no_proxy_for
+            and urlparse.urlparse(address).hostname in self.no_proxy_for
+        )
 
     def make_opener(self, address, headers=None):
         scheme = None
@@ -485,10 +482,7 @@ class HTTP(object):
 
         if self.proxy == 'wpad':
             proxy = get_proxy_for_address(address)
-            if proxy:
-                proxy = proxy[0]
-            else:
-                proxy = None
+            proxy = proxy[0] if proxy else None
         else:
             proxy = self.proxy
 
@@ -512,7 +506,7 @@ class HTTP(object):
                 except ValueError:
                     pass
 
-            proxy_host = host+':'+str(port)
+            proxy_host = f'{host}:{str(port)}'
 
             sockshandler = SocksiPyHandler(
                 scheme, host, port,
@@ -525,9 +519,7 @@ class HTTP(object):
             if scheme == PROXY_SCHEME_HTTP:
                 http_proxy = proxy_host
 
-                handlers.append(urllib2.ProxyHandler({
-                    'http': 'http://' + http_proxy
-                }))
+                handlers.append(urllib2.ProxyHandler({'http': f'http://{http_proxy}'}))
 
                 proxy_password_manager = ProxyPasswordManager(
                     'http', host, port, user, password
@@ -574,11 +566,9 @@ class HTTP(object):
 
         context = HTTPContext.get_default()
 
-        handlers.append(context)
-
-        handlers.append(urllib2.HTTPDefaultErrorHandler)
-        handlers.append(urllib2.HTTPErrorProcessor)
-
+        handlers.extend(
+            (context, urllib2.HTTPDefaultErrorHandler, urllib2.HTTPErrorProcessor)
+        )
         opener = urllib2.OpenerDirector()
         for h in handlers:
             if isinstance(h, (types.ClassType, type)):
@@ -592,7 +582,7 @@ class HTTP(object):
             if isinstance(headers, dict):
                 filter_headers = set(headers.keys())
             else:
-                filter_headers = set(x for x, _ in headers)
+                filter_headers = {x for x, _ in headers}
 
         if isinstance(self.headers, dict):
             opener.addheaders = [
@@ -604,9 +594,7 @@ class HTTP(object):
 
         if headers:
             if isinstance(headers, dict):
-                opener.addheaders.extend([
-                    (x, y) for x,y in self.headers.iteritems()
-                ])
+                opener.addheaders.extend(list(self.headers.iteritems()))
             else:
                 opener.addheaders.extend(headers)
 
@@ -617,7 +605,7 @@ class HTTP(object):
             return_headers=False, code=False, params={}):
 
         if params:
-            url = url + '?' + urllib.urlencode(params)
+            url = f'{url}?{urllib.urlencode(params)}'
 
         opener, scheme, host, password_managers, context = self.make_opener(url)
 
@@ -648,19 +636,15 @@ class HTTP(object):
             if return_headers:
                 result.append(e.hdrs.dict)
 
-            if len(result) == 1:
-                return result[0]
-            else:
-                return tuple(result)
-
+            return result[0] if len(result) == 1 else tuple(result)
         if save:
             with open(save, 'w+b') as output:
                 while True:
-                    chunk = response.read(65535)
-                    if not chunk:
-                        break
+                    if chunk := response.read(65535):
+                        output.write(chunk)
 
-                    output.write(chunk)
+                    else:
+                        break
 
             result = [save]
         else:
@@ -679,17 +663,14 @@ class HTTP(object):
             for password_manager in password_managers:
                 password_manager.commit()
 
-        if len(result) == 1:
-            return result[0]
-        else:
-            return tuple(result)
+        return result[0] if len(result) == 1 else tuple(result)
 
     def post(
             self, url, file=None, data=None, save=None, headers={},
             multipart=False, return_url=False, return_headers=False,
             code=False, params={}):
 
-        if not (file or data):
+        if not file and not data:
             data = ''
 
         response = None
@@ -697,21 +678,18 @@ class HTTP(object):
 
         if multipart:
             data, _headers = multipart_encode(data)
-            if not headers:
-                headers = _headers
-            else:
+            if headers:
                 headers = headers.copy()
                 headers.update(_headers)
-        else:
-            if isinstance(data, (list,tuple,set,frozenset)):
-                data = urllib.urlencode({
-                    k:v for k,v in data
-                })
-            elif isinstance(data, dict):
-                data = urllib.urlencode(data)
+            else:
+                headers = _headers
+        elif isinstance(data, (list,tuple,set,frozenset)):
+            data = urllib.urlencode(dict(data))
+        elif isinstance(data, dict):
+            data = urllib.urlencode(data)
 
         if params:
-            url = url + '?' + urllib.urlencode(params)
+            url = f'{url}?{urllib.urlencode(params)}'
 
         opener, scheme, host, password_managers, context = self.make_opener(url)
 
@@ -744,19 +722,15 @@ class HTTP(object):
             if return_headers:
                 result.append(e.hdrs.dict)
 
-            if len(result) == 1:
-                return result[0]
-            else:
-                return tuple(result)
-
+            return result[0] if len(result) == 1 else tuple(result)
         if save:
             with open(save, 'w+b') as output:
                 while True:
-                    chunk = response.read(65535)
-                    if not chunk:
-                        break
+                    if chunk := response.read(65535):
+                        output.write(chunk)
 
-                    output.write(chunk)
+                    else:
+                        break
 
                 result = [save]
         else:
@@ -775,10 +749,7 @@ class HTTP(object):
             for password_manager in password_managers:
                 password_manager.commit()
 
-        if len(result) == 1:
-            return result[0]
-        else:
-            return tuple(result)
+        return result[0] if len(result) == 1 else tuple(result)
 
 from .proxies import (
     find_default_proxy, set_proxy_unavailable,

@@ -142,7 +142,7 @@ class TTYRec(PupyModule):
                 break
 
             session, tty, comm, probe, pid, timestamp, lbuf = \
-                self.header.unpack(header)
+                    self.header.unpack(header)
 
             comm = comm.strip().strip('\0')
             tty = tty.strip()
@@ -159,7 +159,7 @@ class TTYRec(PupyModule):
 
             if filename not in dests:
                 dest = os.path.join(dumpdir, filename)
-                self.info('{} -> {}'.format(tty, dest))
+                self.info(f'{tty} -> {dest}')
 
                 is_append = os.path.exists(dest)
                 dests[filename] = open(dest, 'a')
@@ -172,16 +172,16 @@ class TTYRec(PupyModule):
 
                     if resize:
                         payload = None
-                        header.update({
+                        header |= {
                             'width': resize[0],
                             'height': resize[1],
-                        })
+                        }
 
                     json.dump(header, dests[filename])
                     dests[filename].write('\n')
 
             elif resize:
-                payload = '\033[18;{};{}t'.format(resize[1], resize[0])
+                payload = f'\033[18;{resize[1]};{resize[0]}t'
 
             if payload:
                 json.dump([

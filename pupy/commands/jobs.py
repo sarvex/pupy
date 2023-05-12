@@ -16,9 +16,7 @@ def do(server, handler, config, modargs):
     if modargs.kill:
         j = server.get_job(modargs.kill)
         handler.summary(j)
-        finished = j.is_finished()
-
-        if finished:
+        if finished := j.is_finished():
             server.del_job(j.jid)
             handler.display(Success('Job closed'))
 
@@ -32,8 +30,7 @@ def do(server, handler, config, modargs):
 
     elif modargs.kill_no_output:
         j = server.get_job(modargs.kill_no_output)
-        finished = j.is_finished()
-        if finished:
+        if finished := j.is_finished():
             server.del_job(j.jid)
             handler.display('Job closed')
         else:
@@ -49,16 +46,15 @@ def do(server, handler, config, modargs):
 
     elif modargs.list:
         if server.jobs:
-            dictable = []
-
-            for jid,job in server.jobs.iteritems():
-                dictable.append({
-                    'id':jid,
-                    'job':str(job),
+            dictable = [
+                {
+                    'id': jid,
+                    'job': str(job),
                     'status': 'finished' if job.is_finished() else 'running',
-                    'clients': len(job)
-                })
-
+                    'clients': len(job),
+                }
+                for jid, job in server.jobs.iteritems()
+            ]
             handler.display(Table(dictable, ['id', 'job', 'clients', 'status']))
         else:
             handler.display(Error('No jobs are currently running'))

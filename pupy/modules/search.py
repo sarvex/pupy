@@ -27,8 +27,7 @@ class SearchModule(PupyModule):
 
     @classmethod
     def init_argparse(cls):
-        example = 'Examples:\n'
-        example += '- Recursively search strings in files:\n'
+        example = 'Examples:\n' + '- Recursively search strings in files:\n'
         example += '>> run search -C .*ini passw.*=.*\n'
         example += '>> run search -C .* passw.*=.* -I\n'
         example += '- Recursively search string in file names:\n'

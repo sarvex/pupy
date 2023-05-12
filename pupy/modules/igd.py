@@ -24,12 +24,12 @@ class IGDCMDClient(object):
 
     def show(self, values):
         if hasattr(values, 'iterkeys'):
-            column_size = max([len(x) for x in values.iterkeys()])
+            column_size = max(len(x) for x in values.iterkeys())
             fmt = '{{:<{}}}'.format(column_size)
             for k, v in values.iteritems():
                 if k.startswith('New'):
                     k = k[3:]
-                self.log(colorize(fmt.format(k), 'yellow')+' {}'.format(v))
+                self.log(colorize(fmt.format(k), 'yellow') + f' {v}')
         else:
             values = list(values)
             columns = []
@@ -37,25 +37,19 @@ class IGDCMDClient(object):
             for value in values:
                 for column, cvalue in value.iteritems():
                     if column not in columns:
-                        if column.startswith('New'):
-                            columnlen = len(column) - 3
-                        else:
-                            columnlen = len(column)
-
+                        columnlen = len(column) - 3 if column.startswith('New') else len(column)
                         columns.append(column)
                         column_sizes[column] = max(len(str(cvalue)), columnlen)
                     else:
                         column_sizes[column] = max(column_sizes[column], len(str(cvalue)))
 
-            lines = []
             header = ''
             for column in columns:
                 fmt = ' {{:<{}}} '.format(column_sizes[column])
                 if column.startswith('New'):
                     column = column[3:]
                 header += colorize(fmt.format(column), 'yellow')
-            lines.append(header)
-
+            lines = [header]
             for value in values:
                 row = ''
                 for column in columns:
@@ -425,6 +419,6 @@ class IGDClient(PupyModule):
             args.func(args)
         except Exception as e:
             if hasattr(e, 'description'):
-                self.error('IGD: {}'.format(e.description))
+                self.error(f'IGD: {e.description}')
             else:
-                self.error('Exception: {}'.format(e))
+                self.error(f'Exception: {e}')

@@ -35,8 +35,7 @@ def decrypt_hash(edata, nlkm, ch):
     rc4key = hmac_md5.digest()
 
     rc4 = ARC4.new(rc4key)
-    data = rc4.encrypt(edata)
-    return data
+    return rc4.encrypt(edata)
 
 def decrypt_hash_vista(edata, nlkm, ch):
     """

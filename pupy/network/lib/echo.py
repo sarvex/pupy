@@ -57,16 +57,17 @@ class EchoScanHTTP(object):
 
     def on_open_port(self, info):
         host, port, sock = info
-        key = '{}:{}'.format(host, port)
+        key = f'{host}:{port}'
         try:
             self._add_table(key, sock)
 
             request = Request(
-                'http://{}:{}/?echo=%DE%AD%BE%EF'.format(host, port),
+                f'http://{host}:{port}/?echo=%DE%AD%BE%EF',
                 headers={
                     'Host': key,
                     'User-Agent': USER_AGENT,
-                })
+                },
+            )
 
             response = self._opener.open(
                 request, timeout=self._timeout
@@ -96,8 +97,7 @@ class EchoScanTcp(object):
             sock.setblocking(1)
             sock.settimeout(self.timeout)
 
-            payload = MAGIC + ''.join(
-                choice(letters) for i in xrange(64))
+            payload = (MAGIC + ''.join(choice(letters) for _ in xrange(64)))
 
             sock.send(payload)
             response = sock.recv(len(payload))
@@ -134,8 +134,7 @@ def udp(host, timeout=10, amount=10, abort=None):
             s = socket(AF_INET, SOCK_DGRAM)
             s.connect((host, port))
 
-            payload = MAGIC + ''.join(
-                choice(letters) for i in xrange(64))
+            payload = MAGIC + ''.join(choice(letters) for _ in xrange(64))
 
             datas[s] = (port, payload, time())
             try:
@@ -158,13 +157,13 @@ def udp(host, timeout=10, amount=10, abort=None):
                 del datas[sock]
                 sock.close()
 
-        to_cleanup = []
         now = time()
 
-        for sock, (_, _, start) in datas.iteritems():
-            if now - start > timeout:
-                to_cleanup.append(sock)
-
+        to_cleanup = [
+            sock
+            for sock, (_, _, start) in datas.iteritems()
+            if now - start > timeout
+        ]
         for sock in to_cleanup:
             sock.close()
             del datas[sock]
@@ -180,7 +179,7 @@ def tcp(host, timeout=10, amount=10, abort=None):
     tcp_context = EchoScanTcp(timeout)
 
     top_ports = list(TOP1000)
-    low_ports = list(x for x in xrange(1, 65535) if x not in top_ports)
+    low_ports = [x for x in xrange(1, 65535) if x not in top_ports]
 
     shuffle(top_ports)
     shuffle(low_ports)
@@ -209,10 +208,11 @@ def tcp(host, timeout=10, amount=10, abort=None):
         )
 
     connectable_raw = tcp_context.available
-    connectable_http = set(
-        port for port in http_context.available
+    connectable_http = {
+        port
+        for port in http_context.available
         if port not in tcp_context.available
-    )
+    }
 
     return connectable_raw, connectable_http
 

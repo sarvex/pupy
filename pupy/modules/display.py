@@ -25,20 +25,17 @@ class Display(PupyModule):
 
         if args.display:
             if attach_to_display(args.display, args.xauth):
-                self.success('Attached to {}'.format(args.display))
+                self.success(f'Attached to {args.display}')
                 if args.print_xauth:
-                    info = extract_xauth_info(args.display)
-                    if info:
+                    if info := extract_xauth_info(args.display):
                         family, host, display, cookie, value = info
-                        self.success('xauth: {}:{}/{} {} {}'.format(
-                            host, display, family, cookie, value
-                        ))
+                        self.success(f'xauth: {host}:{display}/{family} {cookie} {value}')
                     else:
                         self.error('xauth: entries not found')
             else:
-                self.error('Couldn\'t attach to {}'.format(args.display))
+                self.error(f"Couldn\'t attach to {args.display}")
         else:
             displays = guess_displays()
             for display, items in displays.iteritems():
                 for item in items:
-                    self.success('{} user={} xauth={}'.format(display, item[0], item[1]))
+                    self.success(f'{display} user={item[0]} xauth={item[1]}')

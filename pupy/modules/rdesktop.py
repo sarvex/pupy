@@ -31,7 +31,6 @@ class RdesktopWebSocketHandler(WebSocketHandler):
 
     def on_open(self):
         self.set_nodelay(True)
-        pass
 
     def events_handler(self, mouse_refresh_rate=0.01):
         """ function to handle events in queue """
@@ -57,7 +56,7 @@ class RdesktopWebSocketHandler(WebSocketHandler):
             self.start_stream()
 
         elif js['msg'] == 'click':
-            logger.info("mouse click at : (%s, %s)"%(js['x'], js['y']))
+            logger.info(f"mouse click at : ({js['x']}, {js['y']})")
             self.remote_streamer.click(int(js['x']), int(js['y']))
 
         elif js['msg'] == 'move':
@@ -66,7 +65,7 @@ class RdesktopWebSocketHandler(WebSocketHandler):
 
         elif js['msg'] == 'keypress':
             key = js['key'] #unicode key
-            logger.info("key press : %s"%key)
+            logger.info(f"key press : {key}")
             try:
                 if len(key) > 1:
                     key=key.lower()
@@ -78,7 +77,7 @@ class RdesktopWebSocketHandler(WebSocketHandler):
                 logger.error(e)
 
         else:
-            logger.error("unknown message:"+data)
+            logger.error(f"unknown message:{data}")
 
     def update_video_callback(self, jpg_data, width, height):
         try:

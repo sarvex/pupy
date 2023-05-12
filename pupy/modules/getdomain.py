@@ -17,8 +17,7 @@ class GetDomain(PupyModule):
     def run(self, args):
         get_domain_controller = self.client.remote('pupwinutils.getdomain', 'get_domain_controller')
 
-        primary_domain = get_domain_controller()
-        if not primary_domain:
-            self.error("This host is not part of a domain.")
+        if primary_domain := get_domain_controller():
+            self.success(f"Primary domain controller: {primary_domain}")
         else:
-            self.success("Primary domain controller: %s" % primary_domain)
+            self.error("This host is not part of a domain.")

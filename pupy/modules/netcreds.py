@@ -63,11 +63,7 @@ class NetCreds(PupyModule):
             'username', 'password', 'realm'
         ]
 
-        objects = []
-
-        for cred in creds:
-            objects.append(dict(cred))
-
+        objects = [dict(cred) for cred in creds]
         self.log(Table(objects, columns))
 
 

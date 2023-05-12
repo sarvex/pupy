@@ -17,8 +17,7 @@ class CheckVM(PupyModule):
     def run(self, args):
         if self.client.is_windows():
             check_vm = self.client.remote('checkvm')
-            vms = check_vm.Check_VM().run()
-            if vms:
+            if vms := check_vm.Check_VM().run():
                 for vm in vms:
                     self.success(vm)
             else:
@@ -26,17 +25,15 @@ class CheckVM(PupyModule):
 
         elif self.client.is_linux():
             checkvm = self.client.remote('checkvm', 'checkvm', False)
-            vm = checkvm()
-            if vm:
-                self.success('This appears to be a %s virtual machine' % vm)
+            if vm := checkvm():
+                self.success(f'This appears to be a {vm} virtual machine')
             else:
                 self.success('This does not appear to be a virtual machine')
 
         elif self.client.is_darwin():
             checkvm = self.client.remote('checkvm', 'checkvm', False)
             self.info('Be patient, could take a while')
-            vm = checkvm()
-            if vm:
-                self.success('This appears to be a %s virtual machine' % vm)
+            if vm := checkvm():
+                self.success(f'This appears to be a {vm} virtual machine')
             else:
                 self.success('This does not appear to be a virtual machine')

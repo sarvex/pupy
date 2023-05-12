@@ -19,7 +19,7 @@ class ClearLogs(PupyModule):
         cls.arg_parser = PupyArgumentParser(prog="clear_logs", description=cls.__doc__)
 
     def run(self, args):
-        if self.client.desc['intgty_lvl'] != "High" and self.client.desc['intgty_lvl'] != "System":
+        if self.client.desc['intgty_lvl'] not in ["High", "System"]:
             self.error('You need admin privileges to clear logs')
             return
 

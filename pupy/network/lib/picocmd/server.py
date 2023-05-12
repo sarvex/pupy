@@ -296,8 +296,7 @@ class DnsCommandServerException(Exception):
         return Error(self.message)
 
     def __str__(self):
-        return '{}: (d={} v={} n={})'.format(
-            self.message, self.nonce, self.version, self.domain)
+        return f'{self.message}: (d={self.nonce} v={self.version} n={self.domain})'
 
     def __repr__(self):
         return repr(self.error)
@@ -394,22 +393,16 @@ class DnsCommandServerHandler(BaseResolver):
     def cleanup(self):
         while not self.finished.is_set():
             with self.lock:
-                to_remove = []
-
-                for spi, session in self.sessions.iteritems():
-                    if session.expired:
-                        to_remove.append(spi)
-
+                to_remove = [
+                    spi
+                    for spi, session in self.sessions.iteritems()
+                    if session.expired
+                ]
                 for spi in to_remove:
                     self.on_session_cleaned_up(self.sessions[spi])
                     del self.sessions[spi]
 
-                to_remove = []
-
-                for key, node in self.nodes.iteritems():
-                    if node.expired:
-                        to_remove.append(key)
-
+                to_remove = [key for key, node in self.nodes.iteritems() if node.expired]
                 for key in to_remove:
                     del self.nodes[key]
 
@@ -435,9 +428,11 @@ class DnsCommandServerHandler(BaseResolver):
         ]
 
     def _nodeids_with_sessions(self, ids):
-        return set([
-            session.node for session in self.sessions if self.sessions[session].node in ids
-        ])
+        return {
+            session.node
+            for session in self.sessions
+            if self.sessions[session].node in ids
+        }
 
     @locked
     def add_command(self, command, session=None, default=False):
@@ -476,7 +471,7 @@ class DnsCommandServerHandler(BaseResolver):
 
         if session:
             sessions = self.find_sessions(spi=session) or \
-              self.find_sessions(node=session)
+                  self.find_sessions(node=session)
 
             if not sessions:
                 return 0
@@ -490,14 +485,14 @@ class DnsCommandServerHandler(BaseResolver):
                 count = 1
                 command.add_to_session(sessions)
 
-            return count
         else:
             count = 0
             for session in self.find_sessions():
                 command.add_to_session(session)
                 count += 1
 
-            return count
+
+        return count
 
     @locked
     def reset_commands(self, session=None, default=False):
@@ -524,7 +519,7 @@ class DnsCommandServerHandler(BaseResolver):
 
         if session:
             sessions = self.find_sessions(spi=session) or \
-              self.find_sessions(node=session)
+                  self.find_sessions(node=session)
 
             if not sessions:
                 return 0
@@ -538,14 +533,14 @@ class DnsCommandServerHandler(BaseResolver):
                 count = 1
                 sessions.commands = []
 
-            return count
         else:
             count = 0
             for session in self.find_sessions():
                 if session.commands:
                     session.commands = []
                     count += 1
-            return count
+
+        return count
 
     @locked
     def find_nodes(self, node):
@@ -576,19 +571,19 @@ class DnsCommandServerHandler(BaseResolver):
         if not (spi or node):
             return [
                 session for session in self.sessions.itervalues() \
-                if session.system_info is not None
+                    if session.system_info is not None
             ]
         elif spi:
             return [
                 self.sessions[x] for x in spi if x in self.sessions
             ]
-        elif node:
+        else:
             return [
                 session for session in self.sessions.itervalues() \
-                    if session.cid == node or session.node == node or (
+                        if session.cid == node or session.node == node or (
                         session.system_info and \
-                        (session.system_info['node'] in set(node) or \
-                              str(session.system_info['external_ip']) in set(node)))
+                            (session.system_info['node'] in set(node) or \
+                                  str(session.system_info['external_ip']) in set(node)))
             ]
 
     @locked
@@ -600,10 +595,9 @@ class DnsCommandServerHandler(BaseResolver):
             raise ValueError('Interval should not be less then 30s to avoid DNS storm')
 
         if node and (interval or timeout):
-            sessions = self.find_sessions(
-                spi=node) or self.find_sessions(node=node)
-
-            if sessions:
+            if sessions := self.find_sessions(spi=node) or self.find_sessions(
+                node=node
+            ):
                 for session in sessions:
                     if interval:
                         session.timeout = (interval*3)
@@ -690,7 +684,7 @@ class DnsCommandServerHandler(BaseResolver):
         elif version == 2:
             return self.encoders[self.ENCODER_V2]
 
-        raise ValueError('Unsupported version {}'.format(version))
+        raise ValueError(f'Unsupported version {version}')
 
     def csum_from_session(self, session, version):
         if version == 1:
@@ -716,12 +710,12 @@ class DnsCommandServerHandler(BaseResolver):
 
         response = []
 
-        for idx, part in enumerate([payload[i:i+3] for i in xrange(0, len(payload), 3)]):
+        for idx, part in enumerate(payload[i:i+3] for i in xrange(0, len(payload), 3)):
             header = (random.randint(1, 3) << 30)
             idx = idx << 25
             bits = (struct.unpack('>I', '\x00'+part+chr(random.randrange(0, 255))*(3-len(part)))[0]) << 1
             packed = struct.unpack('!BBBB', struct.pack('>I', header | idx | bits | int(not bool(bits & 6))))
-            response.append('.'.join(['{}'.format(int(x)) for x in packed]))
+            response.append('.'.join([f'{int(x)}' for x in packed]))
 
         return response
 
@@ -747,7 +741,7 @@ class DnsCommandServerHandler(BaseResolver):
 
         response = []
 
-        for idx, part in enumerate([payload[i:i+15] for i in xrange(0, len(payload), 15)]):
+        for idx, part in enumerate(payload[i:i+15] for i in xrange(0, len(payload), 15)):
             packed = struct.pack('B', idx) + part
             if len(packed) < 16:
                 packed = packed + '\x00' * (16 - len(packed))
@@ -926,9 +920,7 @@ class DnsCommandServerHandler(BaseResolver):
 
             return [Exit()]
 
-        elif (
-                isinstance(command, Poll) or isinstance(command, SystemStatus)
-            ) and (session is not None):
+        elif (isinstance(command, (Poll, SystemStatus))) and session is not None:
             if session.system_info:
                 self.on_keep_alive(session.system_info)
 
@@ -936,7 +928,7 @@ class DnsCommandServerHandler(BaseResolver):
                 session.system_status = command.get_dict()
 
                 if session._users_cnt_reported is not None and \
-                  session._users_cnt_reported != session.system_status['users']:
+                      session._users_cnt_reported != session.system_status['users']:
                     if session._users_cnt_reported > session.system_status['users']:
                         self.on_users_decrement(session)
                     else:
@@ -952,7 +944,7 @@ class DnsCommandServerHandler(BaseResolver):
                     session._high_resource_usage_reported = False
 
                 if session._user_active_reported is not None and \
-                  session._user_active_reported != session.system_status['idle']:
+                      session._user_active_reported != session.system_status['idle']:
                     if session.system_status['idle']:
                         self.on_user_become_inactive(session)
                     else:
@@ -973,7 +965,7 @@ class DnsCommandServerHandler(BaseResolver):
 
             if not node:
                 with self.lock:
-                    if not (command.node, 0) in self.nodes:
+                    if (command.node, 0) not in self.nodes:
                         node = self._new_node_from_systeminfo(command)
                     else:
                         node = self.nodes[(command.node, 0)]
@@ -1012,7 +1004,7 @@ class DnsCommandServerHandler(BaseResolver):
             elif not session.pstore_dirty:
                 session._pstore_dirty_reported = False
 
-        elif isinstance(command, Ack) and (session is not None):
+        elif isinstance(command, Ack):
             if session.system_info:
                 self.on_keep_alive(session.system_info)
 
@@ -1031,7 +1023,7 @@ class DnsCommandServerHandler(BaseResolver):
 
             if not node:
                 with self.lock:
-                    if not (command.node, session.spi) in self.nodes:
+                    if (command.node, session.spi) not in self.nodes:
                         node = self._new_node_from_systeminfo(command, session.spi)
                     else:
                         node = self.nodes[(command.node, session.spi)]
@@ -1048,8 +1040,8 @@ class DnsCommandServerHandler(BaseResolver):
                 response = []
 
                 encoder_version = \
-                  self.ENCODER_V1 if not node or node.version == 1 \
-                  else self.ENCODER_V2
+                      self.ENCODER_V1 if not node or node.version == 1 \
+                      else self.ENCODER_V2
 
                 if command.spi not in self.sessions:
                     self.sessions[command.spi] = Session(
@@ -1328,10 +1320,11 @@ class DnsCommandServerHandler(BaseResolver):
             return reply
 
 
-        answers = self.process(qtype, qname.stripSuffix(self.domain).idna()[:-1])
-        klass = SUPPORTED_METHODS[qtype]
+        if answers := self.process(
+            qtype, qname.stripSuffix(self.domain).idna()[:-1]
+        ):
+            klass = SUPPORTED_METHODS[qtype]
 
-        if answers:
             for answer in answers:
                 reply.add_answer(RR(qname, qtype, rdata=klass(answer), ttl=600))
 

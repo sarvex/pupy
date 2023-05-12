@@ -15,10 +15,9 @@ class ExitModule(PupyModule):
         cls.arg_parser.add_argument('--yes', action="store_true", help='exit confirmation')
 
     def run(self, args):
-        if args.yes:
-            try:
-                self.client.conn.exit()
-            except Exception:
-                pass
-        else:
+        if not args.yes:
             raise PupyModuleError('Please conform with --yes to perform this action.')
+        try:
+            self.client.conn.exit()
+        except Exception:
+            pass

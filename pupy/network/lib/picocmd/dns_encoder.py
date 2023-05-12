@@ -74,9 +74,8 @@ class Node(object):
         self.value = value
 
     def __lt__(self, other):
-        if hasattr(other, 'value'):
-            if self.value == IS_END:
-                return False
+        if hasattr(other, 'value') and self.value == IS_END:
+            return False
 
         return self.weight < other.weight
 
@@ -710,19 +709,19 @@ if __name__ == '__main__':
                         if priv == '*' or all(x in 'abcdef1234567890' for x in priv):
                             priv = ''
 
-                        if not all(x in DNS_ALPHABET+'*;' for x in priv):
+                        if any(x not in f'{DNS_ALPHABET}*;' for x in priv):
                             continue
 
-                        if not all(x in DNS_ALPHABET+'*;' for x in pub):
+                        if any(x not in f'{DNS_ALPHABET}*;' for x in pub):
                             continue
 
                         for freedns in FREEDNS:
-                            if pub.endswith('.'+freedns):
+                            if pub.endswith(f'.{freedns}'):
                                 self._inc_freedns(freedns)
                                 break
 
                         for tld in TLDS:
-                            if pub.endswith('.'+tld):
+                            if pub.endswith(f'.{tld}'):
                                 self._inc_tld(tld)
 
                                 non_tld = pub[:-(len(tld)+1)]
@@ -771,10 +770,9 @@ if __name__ == '__main__':
             to_leave = []
 
             if len(self.terms) > 32768*16:
-                for term in list(self.terms.keys()):
-                    if self.terms[term] > 1:
-                        to_leave.append(term)
-
+                to_leave.extend(
+                    term for term in list(self.terms.keys()) if self.terms[term] > 1
+                )
                 if len(to_leave) > 32768:
                     to_leave = sorted(
                         to_leave, key=lambda x: self.terms[x],

@@ -101,9 +101,7 @@ def _initialize():
 
 
 def gen_tran_id():
-    a = ''.join(random.choice('0123456789ABCDEF') for i in range(32))
-    # return binascii.a2b_hex(a)
-    return a
+    return ''.join(random.choice('0123456789ABCDEF') for _ in range(32))
 
 def stun_test(sock, host, port, send_data="", count=3):
     retVal = {'Resp': False, 'ExternalIP': None, 'ExternalPort': None,
@@ -205,31 +203,21 @@ def get_nat_type(s, stun_host=None, stun_port=3478, only_ip=False, count=3):
                 break
 
     if not resp:
-        if only_ip:
-            return None
-
-        return Blocked, None
-
+        return None if only_ip else (Blocked, None)
     log.debug("Result: %s", ret)
 
     exIP = ret['ExternalIP']
-    exPort = ret['ExternalPort']
     changedIP = ret['ChangedIP']
     changedPort = ret['ChangedPort']
 
     if only_ip:
         return ret['ExternalIP']
 
+    changeRequest = ''.join([ChangeRequest, '0004', "00000006"])
     if ret['ExternalIP'] == source_ip:
-        changeRequest = ''.join([ChangeRequest, '0004', "00000006"])
         source_ip, source_port, ret = stun_test(s, stun_host, port, changeRequest, count=count)
-        if ret['Resp']:
-            typ = OpenInternet
-        else:
-            typ = SymmetricUDPFirewall
-
+        typ = OpenInternet if ret['Resp'] else SymmetricUDPFirewall
     else:
-        changeRequest = ''.join([ChangeRequest, '0004', "00000006"])
         log.debug("Do Test2")
         source_ip, source_port, ret = stun_test(s, stun_host, port, changeRequest, count=count)
         log.debug("Result: %s", ret)
@@ -240,9 +228,10 @@ def get_nat_type(s, stun_host=None, stun_port=3478, only_ip=False, count=3):
             log.debug("Do Test1")
             source_ip, source_port, ret = stun_test(s, changedIP, changedPort, count=count)
             log.debug("Result: %s", ret)
+            exPort = ret['ExternalPort']
             if not ret['Resp']:
                 typ = ChangedAddressError
-            elif exIP == ret['ExternalIP'] and exPort == ret['ExternalPort']:
+            elif exIP == ret['ExternalIP'] and exPort == exPort:
                 changePortRequest = ''.join([
                     ChangeRequest, '0004',
                     "00000002"
@@ -252,10 +241,7 @@ def get_nat_type(s, stun_host=None, stun_port=3478, only_ip=False, count=3):
                 source_ip, source_port, ret = stun_test(s, changedIP, port, changePortRequest, count=count)
                 log.debug("Result: %s", ret)
 
-                if ret['Resp']:
-                    typ = RestricNAT
-                else:
-                    typ = RestricPortNAT
+                typ = RestricNAT if ret['Resp'] else RestricPortNAT
             else:
                 typ = SymmetricNAT
 

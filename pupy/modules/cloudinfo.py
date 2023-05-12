@@ -27,7 +27,7 @@ class CloudInfo(PupyModule):
             self.error('Unknown cloud or non-cloud environment')
             return
 
-        self.success('Cloud: {}'.format(cloud))
+        self.success(f'Cloud: {cloud}')
 
         formatted_json = json.dumps(metadata, indent=1, sort_keys=True)
 
@@ -39,4 +39,4 @@ class CloudInfo(PupyModule):
             iam = metadata['meta-data']['iam']
             if 'info' in iam and 'security-credentials' in iam and iam['info']['Code'] == 'Success':
                 arn = iam['info']['InstanceProfileArn'].split('/', 1)[-1]
-                self.success('IAM: {}'.format(arn))
+                self.success(f'IAM: {arn}')

@@ -38,11 +38,7 @@ class InteractiveShell(PupyModule):
         cls.arg_parser.add_argument('program', nargs=REMAINDER, help='Execute in shell')
 
     def init(self, args):
-        if args.recorder == 'none':
-            self.rec = None
-        else:
-            self.rec = args.recorder
-
+        self.rec = None if args.recorder == 'none' else args.recorder
         PupyModule.init(self, args)
 
     def run(self, args):

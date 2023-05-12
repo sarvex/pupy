@@ -39,11 +39,11 @@ class Commands(object):
         files = {}
 
         for path in commands_paths:
-            files.update({
-                '.'.join(x.rsplit('.', 1)[:-1]):os.path.join(path, x) \
-                for x in os.listdir(path) if x.endswith(self.SUFFIXES) and \
-                not x.startswith('__init__')
-            })
+            files |= {
+                '.'.join(x.rsplit('.', 1)[:-1]): os.path.join(path, x)
+                for x in os.listdir(path)
+                if x.endswith(self.SUFFIXES) and not x.startswith('__init__')
+            }
 
         for command, source in files.iteritems():
             try:
@@ -64,11 +64,7 @@ class Commands(object):
             raise InvalidCommand(cmdline)
 
         argv0 = argv[0]
-        args = []
-
-        if len(argv) > 1:
-            args = argv[1:]
-
+        args = argv[1:] if len(argv) > 1 else []
         if argv0 in aliases:
             aliased = aliases[argv0]
             if '{' in aliased or '%' in aliased:

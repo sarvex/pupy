@@ -49,7 +49,7 @@ class KeyloggerModule(PupyModule):
                 self.error('HashMon is not started')
             else:
                 for password, hash in results:
-                    self.success('{}:{}'.format(hash, password))
+                    self.success(f'{hash}:{password}')
 
         elif args.action == 'stop':
             stop()

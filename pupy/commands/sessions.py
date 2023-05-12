@@ -22,20 +22,17 @@ def do(server, handler, config, modargs):
 
     elif modargs.interact:
         handler.default_filter = modargs.interact
-        handler.display(Success('Default filter set to {}'.format(
-            handler.default_filter)))
+        handler.display(Success(f'Default filter set to {handler.default_filter}'))
 
     elif modargs.kill:
-        selected_client = server.get_clients(modargs.kill)
-        if selected_client:
+        if selected_client := server.get_clients(modargs.kill):
             try:
                 selected_client[0].conn.exit()
             except Exception:
                 pass
 
     elif modargs.drop:
-        selected_client = server.get_clients(modargs.drop)
-        if selected_client:
+        if selected_client := server.get_clients(modargs.drop):
             try:
                 selected_client[0].conn._conn.close()
             except Exception:
@@ -83,9 +80,7 @@ def do(server, handler, config, modargs):
                 for k,v in client.desc.iteritems() if k in columns
             }
 
-            data.update({
-                'tags': Color(config.tags(client.node()), color)
-            })
+            data['tags'] = Color(config.tags(client.node()), color)
 
             content.append(data)
 

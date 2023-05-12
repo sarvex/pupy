@@ -59,12 +59,12 @@ class Services(PupyModule):
             binpath = service.get('binpath')
 
             color = None
-            if not status == 'running':
+            if status != 'running':
                 if not args.all:
                     continue
 
                 color = 'grey'
-            elif all([x not in binpath for x in LIKELY_KNOWN]) and not is_linux:
+            elif all(x not in binpath for x in LIKELY_KNOWN) and not is_linux:
                 color = 'cyan'
                 if username.upper() in ADMINS:
                     color = 'lightyellow'

@@ -45,7 +45,7 @@ def are_different(first, second):
         if second not in first:
             return True
 
-    elif type(first) is set and type(second) is set:
+    elif type(first) is set:
         for x in first:
             if x in second:
                 return False
@@ -143,10 +143,7 @@ class AuthInfo(object):
 
     @property
     def user(self):
-        if self.domain:
-            return self.domain + '\\' + self.username
-
-        return self.username
+        return self.domain + '\\' + self.username if self.domain else self.username
 
     def __getattr__(self, key):
         if self.custom and key in self.custom:
@@ -160,7 +157,7 @@ class AuthInfo(object):
 
         result['user'] = self.user
 
-        result.update(self.custom)
+        result |= self.custom
         return result
 
     def as_tuple(self):
@@ -222,11 +219,15 @@ class NetCreds(object):
 
     def find_creds_for_uri(self, authuri, username=None, realm=None, domain=None):
         parsed = urlparse(authuri)
-        for cred in self.find_creds(
-            parsed.scheme, parsed.hostname, parsed.port, username or parsed.username,
-                realm, domain, parsed.path):
-
-            yield cred
+        yield from self.find_creds(
+            parsed.scheme,
+            parsed.hostname,
+            parsed.port,
+            username or parsed.username,
+            realm,
+            domain,
+            parsed.path,
+        )
 
     def find_creds(
         self, schema=None, address=None, port=None, username=None, realm=None,
@@ -246,9 +247,8 @@ class NetCreds(object):
         if port:
             port = int(port)
 
-        if username is not None:
-            if '\\' in username and domain is None:
-                domain, username = username.split('\\', 1)
+        if username is not None and '\\' in username and domain is None:
+            domain, username = username.split('\\', 1)
 
         if port is not None:
             port = int(port)
@@ -289,13 +289,7 @@ class NetCreds(object):
                 (fields[field], getattr(cred, field)) for field in fields
             )
 
-            different = False
-
-            for (first, second) in pairs:
-                if are_different(first, second):
-                    different = True
-                    break
-
+            different = any(are_different(first, second) for first, second in pairs)
             if path is not None and cred.path is not None:
                 these_parts = '/'.join(
                     x for x in path.split('/') if x
@@ -348,9 +342,9 @@ def find_creds(
         domain=None, path=None):
 
     manager = NetCreds.get_default_creds_manager()
-    for cred in manager.find_creds(
-            schema, address, port, username, realm, domain, path):
-        yield cred
+    yield from manager.find_creds(
+        schema, address, port, username, realm, domain, path
+    )
 
 
 def remove_creds(
@@ -358,12 +352,11 @@ def remove_creds(
         domain=None, path=None):
 
     manager = NetCreds.get_default_creds_manager()
-    to_remove = set()
-
-    for cred in manager.find_creds(
-            schema, address, port, username, realm, domain, path):
-        to_remove.add(cred)
-
+    to_remove = set(
+        manager.find_creds(
+            schema, address, port, username, realm, domain, path
+        )
+    )
     for cred in to_remove:
         manager.creds.remove(cred)
 
@@ -402,8 +395,7 @@ def find_all_creds(
 
 def find_creds_for_uri(authuri, username=None, realm=None, domain=None):
     manager = NetCreds.get_default_creds_manager()
-    for cred in manager.find_creds_for_uri(authuri, username, realm, domain):
-        yield cred
+    yield from manager.find_creds_for_uri(authuri, username, realm, domain)
 
 
 def export():

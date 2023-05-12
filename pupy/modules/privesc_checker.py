@@ -50,6 +50,5 @@ class PrivEsc_Checker(PupyModule):
         '''
         '''
         self.success("Results are written in the file {0}".format(filename))
-        f = open(filename, 'w')
-        f.write(data)
-        f.close()
+        with open(filename, 'w') as f:
+            f.write(data)

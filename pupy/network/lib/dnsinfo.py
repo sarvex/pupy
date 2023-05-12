@@ -31,26 +31,20 @@ def _parse_resolv_conf(path='/etc/resolv.conf'):
 
             option = parts[0]
 
-            if option == 'nameserver':
-                nameserver = parts[1]
-                if nameserver in nameservers:
-                    continue
-                nameservers.append(nameserver)
-
-            elif option == 'domain':
+            if option == 'domain':
                 domain = parts[1]
-                if domain in domains:
-                    continue
-                domains.append(domain)
+                if domain not in domains:
+                    domains.append(domain)
+
+            elif option == 'nameserver':
+                nameserver = parts[1]
+                if nameserver not in nameservers:
+                    nameservers.append(nameserver)
 
             elif option == 'search':
                 for search in parts[1:]:
-                    if search in domains:
-                        continue
-                    elif search in searches:
-                        continue
-
-                    searches.append(search)
+                    if search not in domains and search not in searches:
+                        searches.append(search)
 
     searches = [
         suffix for suffix in searches if suffix not in domains
@@ -63,13 +57,12 @@ def _parse_resolv_conf(path='/etc/resolv.conf'):
 
 def _determine_split_char(entry):
     if entry.find(' ') >= 0:
-        split_char = ' '
+        return ' '
     elif entry.find(',') >= 0:
-        split_char = ','
+        return ','
     else:
         # probably a singleton; treat as a space-separated list.
-        split_char = ' '
-    return split_char
+        return ' '
 
 
 def _config_win32_nameservers(nameservers):
@@ -77,9 +70,9 @@ def _config_win32_nameservers(nameservers):
         nameservers = nameservers.encode('utf-8')
 
     split_char = _determine_split_char(nameservers)
-    return list(set(
-        nameserver.strip() for nameserver in nameservers.split(split_char)
-    ))
+    return list(
+        {nameserver.strip() for nameserver in nameservers.split(split_char)}
+    )
 
 
 def _config_win32_search(searches):
@@ -87,9 +80,7 @@ def _config_win32_search(searches):
         searches = searches.encode('utf-8')
 
     split_char = _determine_split_char(searches)
-    return list(set(
-        search.strip() for search in searches.split(split_char)
-    ))
+    return list({search.strip() for search in searches.split(split_char)})
 
 
 def _config_win32_fromkey(_winreg, key):
@@ -284,7 +275,4 @@ def _parse_registry():
 
 
 def dnsinfo():
-    if sys.platform == 'win32':
-        return _parse_registry()
-    else:
-        return _parse_resolv_conf()
+    return _parse_registry() if sys.platform == 'win32' else _parse_resolv_conf()

@@ -39,6 +39,6 @@ if sys.argv[3] not in ["true", "false"]:
     showUsage()
     sys.exit(1)
 
-vista = True if sys.argv[3] == "true" else False
+vista = sys.argv[3] == "true"
 
 dump_file_hashes(sys.argv[1], sys.argv[2], sys.argv[3])

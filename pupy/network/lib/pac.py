@@ -90,11 +90,10 @@ def detect_autoconfig_url_nt():
         return None
 
     url = c_void_p()
-    if WinHttpDetectAutoProxyConfigUrl(3, byref(url)):
-        if url.value:
-            result = cast(url, LPWSTR).value.encode('idna')
-            GlobalFree(url.value)
-            return result
+    if WinHttpDetectAutoProxyConfigUrl(3, byref(url)) and url.value:
+        result = cast(url, LPWSTR).value.encode('idna')
+        GlobalFree(url.value)
+        return result
 
 
 def propose_pac_domains():
@@ -115,8 +114,7 @@ def propose_pac_location():
     if os_name == 'nt':
         for func in (get_autoconfig_url_nt, detect_autoconfig_url_nt):
             try:
-                res = func()
-                if res:
+                if res := func():
                     yield res
 
             except Exception as e:
@@ -125,7 +123,7 @@ def propose_pac_location():
     yield 'http://wpad/wpad.dat'
 
     for domain in propose_pac_domains():
-        yield 'http://wpad.{}/wpad.dat'.format(domain)
+        yield f'http://wpad.{domain}/wpad.dat'
 
 
 def get_pac_content():
@@ -197,10 +195,7 @@ def _get_proxy_for_address(address):
 
         PAC_PLAYER = _refresh_pac_player()
 
-    if not PAC_PLAYER:
-        return []
-
-    return list(PAC_PLAYER[address])
+    return [] if not PAC_PLAYER else list(PAC_PLAYER[address])
 
 
 def get_proxy_for_address(address):
@@ -265,7 +260,7 @@ class PACPlayer(object):
             host = urlparse(address).hostname
         else:
             host = address
-            url = 'tcp://' + address + '/'
+            url = f'tcp://{address}/'
 
         try:
             with self._lock:
@@ -356,11 +351,7 @@ class PACPlayer(object):
     def isInNet(self, host, network, mask):
         host = self.getHost(host)
         ip = self.dnsResolve(host)
-        if not ip:
-            return False
-
-        return ip in IPNetwork(
-            '{}/{}'.format(network, mask))
+        return False if not ip else ip in IPNetwork(f'{network}/{mask}')
 
     def myIpAddress(self):
         if self.internal_ip:

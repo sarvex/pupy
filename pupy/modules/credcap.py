@@ -58,15 +58,21 @@ class Credcap(PupyModule):
                 self.warning("No network credentials recorded")
 
             else:
-                data = '\n'.join(data)
-                data += '\n'
-
+                data = '\n'.join(data) + '\n'
                 # remove color before writting into the file
                 W = '\033[0m'  # white (normal)
                 T = '\033[93m'  # tan
                 data_no_color=data.replace(W, '').replace(T, '')
-                filepath=os.path.join("data", "credcap","creds_"+self.client.short_name()+"_"+str(datetime.datetime.now()).replace(" ","_").replace(":","-")+".log")
-                self.success("Dumping recorded credcap in %s"%filepath)
+                filepath = os.path.join(
+                    "data",
+                    "credcap",
+                    f"creds_{self.client.short_name()}_"
+                    + str(datetime.datetime.now())
+                    .replace(" ", "_")
+                    .replace(":", "-")
+                    + ".log",
+                )
+                self.success(f"Dumping recorded credcap in {filepath}")
                 with open(filepath, 'w') as f:
                     f.write(data_no_color)
 

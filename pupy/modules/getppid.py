@@ -22,8 +22,8 @@ class PsModule(PupyModule):
             get_current_ppid = self.client.remote('pupwinutils.processes', 'get_current_ppid')
             outputlist = get_current_ppid()
             for out in outputlist:
-                self.success('%s: %s' % (out, outputlist[out]))
+                self.success(f'{out}: {outputlist[out]}')
             return # quit
         else:
             getppid = self.client.remote('os', 'getppid')
-            self.success('PPID: {}'.format(getppid()))
+            self.success(f'PPID: {getppid()}')

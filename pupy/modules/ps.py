@@ -15,8 +15,7 @@ def gen_colinfo(data):
     colinfo = {'pid': 0}
     for pid in data:
         pid_len = len(str(pid))
-        if colinfo['pid'] < pid_len:
-            colinfo['pid'] = pid_len
+        colinfo['pid'] = max(colinfo['pid'], pid_len)
         for column in data[pid]:
             if '_percent' in column:
                 colinfo[column] = 4
@@ -31,11 +30,12 @@ def gen_colinfo(data):
                 data[pid][column]=str(data[pid][column])
 
             col_len = len(data[pid][column].decode('utf8', 'replace'))
-            if column not in colinfo:
+            if (
+                column in colinfo
+                and colinfo[column] < col_len
+                or column not in colinfo
+            ):
                 colinfo[column] = col_len
-            else:
-                if colinfo[column] < col_len:
-                    colinfo[column] = col_len
 
     return colinfo
 
@@ -53,12 +53,10 @@ def to_string(value):
         return value.decode('latin1')
 
 def gen_columns(record, colinfo=None):
-    columns = {}
-
     if type(record['cmdline']) is not list:
         record['cmdline'] = [record['cmdline']]
 
-    columns['name'] = record.get('name') or '?'
+    columns = {'name': record.get('name') or '?'}
     columns['cmdline'] = ' '.join([
         x for x in record['cmdline'][1:] if x.strip()
     ]) if record.get('cmdline') else ''
@@ -88,7 +86,7 @@ def gen_columns(record, colinfo=None):
 
         columns['pid'] = '{{:{}}}'.format(colinfo['pid']).format(record['pid'])
     else:
-        columns['pid'] = '{}'.format(record['pid'])
+        columns['pid'] = f"{record['pid']}"
 
     return columns
 
@@ -103,10 +101,7 @@ def gen_output_line(columns, info, record, wide=False):
     elif cpu > 70 or mem > 50:
         color = "red"
     elif record.get('username') in ADMINS:
-        if record.get('connections'):
-            color = "magenta"
-        else:
-            color = "yellow"
+        color = "magenta" if record.get('connections') else "yellow"
     elif record.get('connections'):
         color = "cyan"
     elif not record.get('same_user'):
@@ -221,12 +216,12 @@ def print_psinfo(fout, families, socktypes, data, colinfo, sections=[], wide=Fal
 def is_filtered(pid, columns, hide, show):
     default_deny = False
 
-    if not hide and not show:
-        return False
+    if not hide:
+        if not show:
+            return False
 
-    if not hide and show:
         default_deny = True
-    if not show and hide:
+    if not show:
         default_deny = False
 
     deny = default_deny
@@ -265,7 +260,7 @@ def check_tree_show(pid, data, show, tree):
             return True
 
     for child in tree.get(pid, []):
-        if not data[pid].get('show', None) is False:
+        if data[pid].get('show', None) is not False:
             if check_tree_show(child, data, show, tree):
                 data[pid]['show'] = True
                 data[child]['show'] = True
@@ -315,18 +310,33 @@ def print_pstree(fout, parent, tree, data,
 
     for child in children:
         print_pstree(
-            fout, child, tree, data,
-            prefix=indent+('┌' if first else '├'), indent=indent + '│ ',
-            colinfo=colinfo, info=info, hide=hide, show=show, wide=wide
+            fout,
+            child,
+            tree,
+            data,
+            prefix=indent + ('┌' if first else '├'),
+            indent=f'{indent}│ ',
+            colinfo=colinfo,
+            info=info,
+            hide=hide,
+            show=show,
+            wide=wide,
         )
         first = False
 
     child = tree[parent][-1]
     print_pstree(
-        fout, child, tree, data,
-        prefix=indent+'└', indent=indent + '  ',
+        fout,
+        child,
+        tree,
+        data,
+        prefix=f'{indent}└',
+        indent=f'{indent}  ',
         colinfo=colinfo,
-        info=info, hide=hide, show=show, wide=wide
+        info=info,
+        hide=hide,
+        show=show,
+        wide=wide,
     )
 
 def print_ps(fout, data, colinfo={},

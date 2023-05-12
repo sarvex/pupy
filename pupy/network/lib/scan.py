@@ -178,10 +178,7 @@ def safe_scan(hosts, ports, abort=None, timeout=10, portion=32, on_complete=None
 
 def scanthread(hosts, ports, on_complete, **kwargs):
     abort = threading.Event()
-    kwargs.update({
-        'abort': abort,
-        'on_complete': nowait(on_complete)
-    })
+    kwargs |= {'abort': abort, 'on_complete': nowait(on_complete)}
     scanner = threading.Thread(target=safe_scan, args=(hosts, ports), kwargs=kwargs)
     scanner.daemon = True
     scanner.start()
@@ -193,8 +190,7 @@ def scanthread_parse(hosts, ports, on_complete, **kwargs):
 
     for target in hosts.split(','):
         if '/' in target:
-            for host in IPNetwork(target):
-                targets.append(str(host))
+            targets.extend(str(host) for host in IPNetwork(target))
         else:
             targets.append(str(target))
 

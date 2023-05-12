@@ -79,22 +79,20 @@ def exec_pe(module, prog_args, path=None, raw_pe=None, interactive=False, use_im
         else:
             complete.set()
             module.error('Launch failed. Press ENTER')
-    else:
-        pid = mp.execute(complete.set)
-        if pid:
-            module.success('[Process launched: PID={}]'.format(pid))
+    elif pid := mp.execute(complete.set):
+        module.success(f'[Process launched: PID={pid}]')
 
-            if not wait:
-                mp.close()
-                module.mp = None
-                return
-
-            complete.wait()
-
-            stdout = mp.stdout
+        if not wait:
             mp.close()
             module.mp = None
-        else:
-            module.error('Launch failed')
+            return
+
+        complete.wait()
+
+        stdout = mp.stdout
+        mp.close()
+        module.mp = None
+    else:
+        module.error('Launch failed')
 
     return stdout

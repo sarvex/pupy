@@ -46,9 +46,9 @@ class USniper(PupyModule):
     def start(self, args):
         offset = args.offset
         if not offset.lower().startswith('0x'):
-            offset = '0x' + offset.upper()
+            offset = f'0x{offset.upper()}'
         else:
-            offset = '0x' + offset[2:].upper()
+            offset = f'0x{offset[2:].upper()}'
 
         start = self.client.remote('usniper', 'start')
 
@@ -85,14 +85,15 @@ class USniper(PupyModule):
                         'DATA': ''.join(dumps).strip(' \0')
                     })
                 else:
-                    for dump in dumps:
-                        records.append({
+                    records.extend(
+                        {
                             'PID': pid,
                             'DATA': dump.strip(' \0'),
                             'EXE': values['exe'],
-                            'CMD': ' '.join(values['cmd'])
-                        })
-
+                            'CMD': ' '.join(values['cmd']),
+                        }
+                        for dump in dumps
+                    )
         self.table(records, ['PID', 'EXE', 'CMD', 'DATA'])
 
     def run(self, args):

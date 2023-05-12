@@ -27,6 +27,7 @@ Implementation of client-side NTP (RFC-1305), and useful NTP-related
 functions.
 """
 
+
 __all__ = (
     'NTPException', 'NTP',
     'NTPPacket', 'NTPClient', 'NTPStats',
@@ -41,10 +42,12 @@ class NTPException(Exception):
     """Exception raised by this module."""
     __slots__ = ()
 
+
+
 class NTP(object):
     """Helper class defining constants."""
 
-    _SYSTEM_EPOCH = datetime.date(*time.gmtime(0)[0:3])
+    _SYSTEM_EPOCH = datetime.date(*time.gmtime(0)[:3])
     """system epoch"""
     _NTP_EPOCH = datetime.date(1900, 1, 1)
     """NTP epoch"""
@@ -208,8 +211,10 @@ class NTPPacket(object):
         NTPException -- in case of invalid packet format
         """
         try:
-            unpacked = struct.unpack(NTPPacket._PACKET_FORMAT,
-                    data[0:struct.calcsize(NTPPacket._PACKET_FORMAT)])
+            unpacked = struct.unpack(
+                NTPPacket._PACKET_FORMAT,
+                data[: struct.calcsize(NTPPacket._PACKET_FORMAT)],
+            )
         except struct.error:
             raise NTPException("Invalid NTP packet.")
 
@@ -329,7 +334,7 @@ class NTPClient(object):
             # build the destination timestamp
             dest_timestamp = system_to_ntp_time(time.time())
         except socket.timeout:
-            raise NTPException("No response received from %s." % host)
+            raise NTPException(f"No response received from {host}.")
         finally:
             s.close()
 
@@ -455,9 +460,9 @@ def stratum_to_text(stratum):
     if stratum in NTP.STRATUM_TABLE:
         return NTP.STRATUM_TABLE[stratum] % (stratum)
     elif 1 < stratum < 16:
-        return "secondary reference (%s)" % (stratum)
+        return f"secondary reference ({stratum})"
     elif stratum == 16:
-        return "unsynchronized (%s)" % (stratum)
+        return f"unsynchronized ({stratum})"
     else:
         raise NTPException("Invalid stratum or reserved.")
 
@@ -484,7 +489,7 @@ def ref_id_to_text(ref_id, stratum=2):
         if text in NTP.REF_ID_TABLE:
             return NTP.REF_ID_TABLE[text]
         else:
-            return "Unidentified reference source '%s'" % (text)
+            return f"Unidentified reference source '{text}'"
     elif 2 <= stratum < 255:
         return '%d.%d.%d.%d' % fields
     else:

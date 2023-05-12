@@ -71,5 +71,5 @@ import zlib
 if os.name == 'nt':
     import ctypes
     import ctypes.wintypes
-if os.name == 'posix':
+elif os.name == 'posix':
     import pty

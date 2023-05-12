@@ -22,8 +22,10 @@ class SMBSpider(PupyModule):
     @classmethod
     def init_argparse(cls):
 
-        example = 'Examples:\n'
-        example += '>> run smbspider 192.168.0.1 --pattern password --content\n'
+        example = (
+            'Examples:\n'
+            + '>> run smbspider 192.168.0.1 --pattern password --content\n'
+        )
         example += '>> run smbspider 192.168.0.1 -u john -p password1 pwd= -d WORKGROUP --content -e txt,ini\n'
         example += '>> run smbspider 172.16.0.20/24 -u john --pattern password.* -H \'aad3b435b51404eeaad3b435b51404ee:da76f2c4c96028b7a6111aef4a50a94d\'\n'
 
@@ -71,5 +73,5 @@ class SMBSpider(PupyModule):
             for s in search_str:
                 if s in files:
                     files = files.replace(s, colorize(s,"green"))
-            self.success("%s" % files)
+            self.success(f"{files}")
         self.info("Search finished !")

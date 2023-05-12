@@ -52,11 +52,10 @@ def _dump_str_to_buffer(obj, stream):
             stream.append(brine.TAG_STR3)
         elif obj_len == 4:
             stream.append(brine.TAG_STR4)
+    elif obj_len < 256:
+        stream.append(brine.TAG_STR_L1 + brine.I1.pack(obj_len))
     else:
-        if obj_len < 256:
-            stream.append(brine.TAG_STR_L1 + brine.I1.pack(obj_len))
-        else:
-            stream.append(brine.TAG_STR_L4 + brine.I4.pack(obj_len))
+        stream.append(brine.TAG_STR_L4 + brine.I4.pack(obj_len))
 
     stream.append(obj)
 
@@ -197,14 +196,11 @@ class SyncRequestDispatchQueue(object):
                             'Task not queued - no empty slots. Launch new worker (%s, %s)',
                                 self, self._pending_workers)
 
-                        pass
-
             if not queued or not ack.wait(timeout=self.MAX_TASK_ACK_TIME, probe=0.1):
                 with self._workers_lock:
-                    if self._closed:
-                        if __debug__:
-                            syncqueuelogger.debug(
-                                'Queue (%s) closed, do not start new worker', self)
+                    if self._closed and __debug__:
+                        syncqueuelogger.debug(
+                            'Queue (%s) closed, do not start new worker', self)
 
                     self._workers += 1
                     if self._workers > self._max_workers:
@@ -255,7 +251,7 @@ class PupyConnection(Connection):
     )
 
     def __repr__(self):
-        return 'PC:{}'.format(self._config['connid'])
+        return f"PC:{self._config['connid']}"
 
     def __init__(self, pupy_srv, *args, **kwargs):
         self._close_lock = Lock()
@@ -280,16 +276,8 @@ class PupyConnection(Connection):
         self._deinitialized = False
         self._closing = False
 
-        if 'ping' in kwargs:
-            ping = kwargs.pop('ping')
-        else:
-            ping = None
-
-        if 'timeout' in kwargs:
-            timeout = kwargs.pop('timeout')
-        else:
-            timeout = None
-
+        ping = kwargs.pop('ping') if 'ping' in kwargs else None
+        timeout = kwargs.pop('timeout') if 'timeout' in kwargs else None
         if 'timer_event' in kwargs:
             self._timer_event = kwargs.pop('timer_event')
 
@@ -415,8 +403,7 @@ class PupyConnection(Connection):
                 'Sync request(%s): %s - complete', self, seq)
 
         if self.closed:
-            raise EOFError(
-                'Connection was closed, seq({}): {}'.format(self, seq))
+            raise EOFError(f'Connection was closed, seq({self}): {seq}')
 
         isexc, obj = self._sync_replies.pop(seq)
         if isexc:
@@ -585,15 +572,11 @@ class PupyConnection(Connection):
             if __debug__:
                 logger.exception('Connection(%s) - rpyc close - %s', self, e)
 
-            pass
-
         try:
             self._close_chan(_catchall)
         except Exception as e:
             if __debug__:
                 logger.exception('Connection(%s) - chan close - %s', self, e)
-
-            pass
 
     @property
     def inactive(self):
@@ -710,7 +693,7 @@ class PupyConnection(Connection):
                 continue
 
             if async_event._ttl < now:
-                raise EOFError('Async timeout! ({})'.format(self))
+                raise EOFError(f'Async timeout! ({self})')
 
             etimeout = async_event._ttl - now
 
@@ -740,10 +723,9 @@ class PupyConnection(Connection):
                         self, interval, ping_timeout)
 
                 self._last_ping = self.ping(timeout=ping_timeout, now=now)
-            else:
-                if __debug__:
-                    logger.debug('Ping not required(%s): %d < %d',
-                        self, self._last_ping or now, self._last_ping + interval)
+            elif __debug__:
+                logger.debug('Ping not required(%s): %d < %d',
+                    self, self._last_ping or now, self._last_ping + interval)
 
         return data
 
@@ -809,9 +791,7 @@ class PupyConnection(Connection):
                 continue
 
             if async_event._ttl and async_event._ttl < now:
-                raise EOFError(
-                    'Async timeout! ({}, event={})'.format(self, async_event),
-                    async_event)
+                raise EOFError(f'Async timeout! ({self}, event={async_event})', async_event)
 
     def defer(self, command, *args):
         if not self.closed:
@@ -838,7 +818,7 @@ class PupyConnectionThread(Thread):
 
         Thread.__init__(self)
         self.daemon = True
-        self.name = 'PupyConnection({}) Thread'.format(self.connection)
+        self.name = f'PupyConnection({self.connection}) Thread'
 
         if __debug__:
             logger.debug('Create connection(%s) thread completed', self.connection)

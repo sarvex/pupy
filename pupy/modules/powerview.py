@@ -243,14 +243,14 @@ Invoke-MapDomainTrust | Export-CSV -NoTypeInformation trusts.csv
             command = "Invoke-UserHunter -SearchForest"
         elif args.GetExploitableSystem:
             command = "Get-ExploitableSystem  | Format-Table -AutoSize"
-        if command == "":
+        if not command:
             if args.command is None:
                 self.error("You have to choose a powerview command!")
                 return
             else:
                 command = args.command
 
-        self.log("Executing the following powerview command: {}".format(command))
+        self.log(f"Executing the following powerview command: {command}")
         output, rest = powershell.call(script, command)
         if args.once:
             powershell.unload(script)

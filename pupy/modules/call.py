@@ -31,19 +31,18 @@ class call(PupyModule):
             callDetails = self.client.conn.modules['pupydroid.call'].getCallDetails()
             self.success("{0} call details got. Saving...".format(len(callDetails)))
             completePath = os.path.join(path, 'callDetails.txt')
-            f = open(completePath, 'w', 1)
-            for aCall in callDetails:
-                date = datetime.datetime.fromtimestamp(int(aCall['callDate'][:-3])).strftime('%Y-%m-%d %H:%M:%S')
-                if aCall['callTypeC'] == self.OUTGOING_TYPE:
-                    callType = "Outgoing"
-                elif aCall['callTypeC'] == self.INCOMING_TYPE:
-                    callType = "Incoming"
-                elif aCall['callTypeC'] == self.MISSED_TYPE:
-                    callType = "Missed"
-                else:
-                    callType = "unknown"
-                f.write("{0}: {1} at {2} during {3} secds\n".format(callType, aCall['phNum'], date, aCall['callDuration']))
-            f.close()
+            with open(completePath, 'w', 1) as f:
+                for aCall in callDetails:
+                    date = datetime.datetime.fromtimestamp(int(aCall['callDate'][:-3])).strftime('%Y-%m-%d %H:%M:%S')
+                    if aCall['callTypeC'] == self.OUTGOING_TYPE:
+                        callType = "Outgoing"
+                    elif aCall['callTypeC'] == self.INCOMING_TYPE:
+                        callType = "Incoming"
+                    elif aCall['callTypeC'] == self.MISSED_TYPE:
+                        callType = "Missed"
+                    else:
+                        callType = "unknown"
+                    f.write("{0}: {1} at {2} during {3} secds\n".format(callType, aCall['phNum'], date, aCall['callDuration']))
             self.success("Call details saved in {0}".format(completePath))
 
 def getLocalAndroidPath(client, args):

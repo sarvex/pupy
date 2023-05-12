@@ -142,7 +142,7 @@ class SMB(PupyModule):
         if not line.startswith('//'):
             raise ValueError('Invalid network format')
 
-        if not type(line) == unicode:
+        if type(line) != unicode:
             line = line.decode('utf-8')
 
         if codepage:
@@ -158,11 +158,7 @@ class SMB(PupyModule):
                 raise ValueError('Host is empty')
 
             host = remote[0]
-            if len(remote) > 1:
-                share = remote[1]
-            else:
-                share = ''
-
+            share = remote[1] if len(remote) > 1 else ''
             if len(remote) > 2:
                 path = ntpath.normpath('\\'.join(remote[2:]))
                 if remote[-1] == '':

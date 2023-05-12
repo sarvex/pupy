@@ -102,9 +102,9 @@ class Drives(PupyModule):
 
                 output.append('{}:'.format(colorize(fstype, 'yellow')))
 
-                dst_max = max([len(x['dst']) for x in mountinfo[fstype]])
-                fsname_max = max([len(x['fsname']) for x in mountinfo[fstype]])
-                free_max = max([len(x['hfree']) if x['total'] else 0 for x in mountinfo[fstype]])
+                dst_max = max(len(x['dst']) for x in mountinfo[fstype])
+                fsname_max = max(len(x['fsname']) for x in mountinfo[fstype])
+                free_max = max(len(x['hfree']) if x['total'] else 0 for x in mountinfo[fstype])
 
                 for info in mountinfo[fstype]:
                     fmt = '{{:<{}}} {{:<{}}} {{:>{}}} {{}}'.format(
@@ -131,10 +131,10 @@ class Drives(PupyModule):
                 if fstype not in mountinfo:
                     continue
 
-                src_max = max([len(x['src']) for x in mountinfo[fstype]])
-                dst_max = max([len(x['dst']) for x in mountinfo[fstype]])
-                fsname_max = max([len(x['fsname']) for x in mountinfo[fstype]])
-                free_max = max([len(x['hfree']) if x['total'] else 0 for x in mountinfo[fstype]])
+                src_max = max(len(x['src']) for x in mountinfo[fstype])
+                dst_max = max(len(x['dst']) for x in mountinfo[fstype])
+                fsname_max = max(len(x['fsname']) for x in mountinfo[fstype])
+                free_max = max(len(x['hfree']) if x['total'] else 0 for x in mountinfo[fstype])
 
                 output.append('{}:'.format(colorize(fstype, 'green')))
                 for info in mountinfo[fstype]:
@@ -199,11 +199,13 @@ class Drives(PupyModule):
                 else:
                     resource['used'] = '?'
 
-                providers[resource['provider']].append(dict(
-                    (k, v) for k, v in resource.iteritems() if k not in (
-                        'usage', 'provider', 'scope'
-                    )
-                ))
+                providers[resource['provider']].append(
+                    {
+                        k: v
+                        for k, v in resource.iteritems()
+                        if k not in ('usage', 'provider', 'scope')
+                    }
+                )
 
             for provider, records in providers.iteritems():
 

@@ -57,7 +57,7 @@ class PSExec(PupyModule):
         if "/" in args.target[0]:
             hosts = IPNetwork(args.target[0])
         else:
-            hosts = list()
+            hosts = []
             hosts.append(args.target[0])
 
         psexec = self.client.remote('pupyutils.psexec', 'psexec', False)

@@ -53,10 +53,7 @@ class CmdRepl(Cmd):
         return []
 
     def precmd(self, line):
-        if self._complete.is_set():
-            return 'EOF'
-        else:
-            return line
+        return 'EOF' if self._complete.is_set() else line
 
     def postcmd(self, stop, line):
         if stop or self._complete.is_set():
@@ -77,12 +74,11 @@ class CmdRepl(Cmd):
 
     def set_prompt(self, prompt='# '):
         methods = {
-            'cmd.exe': ['set PROMPT={}'.format(prompt)],
-            'sh': ['export PS1="{}"'.format(prompt)]
+            'cmd.exe': [f'set PROMPT={prompt}'],
+            'sh': [f'export PS1="{prompt}"'],
         }
 
-        method = methods.get(self._interpreter, None)
-        if method:
+        if method := methods.get(self._interpreter, None):
             self._setting_prompt = True
             self.prompt = prompt
             self._write_cb(self._crlf.join(method) + self._crlf)

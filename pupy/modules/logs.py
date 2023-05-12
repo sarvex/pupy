@@ -77,10 +77,12 @@ class Logs(PupyModule):
             if not events:
                 continue
 
-            data = List([
-                    make_fields(x) for x in events
-                ], indent=0, bullet='+' if args.include or args.exclude else '', caption=Color(
-                    '> ' + category, 'yellow'))
+            data = List(
+                [make_fields(x) for x in events],
+                indent=0,
+                bullet='+' if args.include or args.exclude else '',
+                caption=Color(f'> {category}', 'yellow'),
+            )
 
             if not args.width:
                 data = TruncateToTerm(data)

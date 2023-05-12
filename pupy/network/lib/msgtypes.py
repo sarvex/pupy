@@ -25,8 +25,7 @@ KNOWN_NAMED_TUPLES = (
 
 
 def register_named_tuple(code, type):
-    MSG_TYPES_PACK[type] = lambda obj: Ext(
-        code, packb(tuple(x for x in obj)))
+    MSG_TYPES_PACK[type] = lambda obj: Ext(code, packb(tuple(obj)))
     MSG_TYPES_UNPACK[code] = lambda obj: type(*unpackb(obj.data))
 
 

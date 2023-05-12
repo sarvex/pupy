@@ -102,10 +102,10 @@ Local port forwarding. Listen locally on 1234 and connection establishes by the 
             return
 
         for port, forward in state.local.list(filter_by_local_id=state.local_id):
-            self.success('L: {} -> {}'.format(port, forward))
+            self.success(f'L: {port} -> {forward}')
 
         for port, forward in state.remote.list():
-            self.success('R: {} -> {}'.format(port, forward))
+            self.success(f'R: {port} -> {forward}')
 
     def _parse_args(self, args):
         config = None
@@ -189,19 +189,13 @@ Local port forwarding. Listen locally on 1234 and connection establishes by the 
                     if '=' in lport:
                         bport, lport = lport.split('=')
                         bport = int(bport)
-                        lport = int(lport)
-                    else:
-                        lport = int(lport)
-
+                    lport = int(lport)
                 except:
                     lhost, lport, rhost = parts
                     if '=' in lport:
                         bport, lport = lport.split('=')
                         bport = int(bport)
-                        lport = int(lport)
-                    else:
-                        lport = int(lport)
-
+                    lport = int(lport)
                     rport = lport
 
             elif len(parts) == 4:
@@ -211,13 +205,9 @@ Local port forwarding. Listen locally on 1234 and connection establishes by the 
                 if '=' in rport:
                     bport, rport = rport.split('=')
                     bport = int(bport)
-                    rport = int(rport)
-                else:
-                    rport = int(rport)
-
+                rport = int(rport)
             else:
-                raise ValueError(
-                    'Invalid configuration: {}'.format(config))
+                raise ValueError(f'Invalid configuration: {config}')
 
         return config, parts, lport, lhost, rport, rhost, lpath, rpath, bport
 

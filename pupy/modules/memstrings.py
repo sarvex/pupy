@@ -81,7 +81,7 @@ class MemStrings(PupyModule):
                 return
 
             if args.stdout:
-                self.success('Strings {}:{}'.format(name, pid))
+                self.success(f'Strings {name}:{pid}')
                 for s in strings:
                     self.log(s)
             else:
@@ -93,12 +93,12 @@ class MemStrings(PupyModule):
                     try:
                         folder = config.get_folder('memstrings', {'%c': self.client.short_name()})
                         path = name.replace('!','!!').replace('/', '!').replace('\\', '!')
-                        path = os.path.join(folder, '{}.{}.strings'.format(path, pid))
+                        path = os.path.join(folder, f'{path}.{pid}.strings')
                         last_log = open(path, 'w+')
-                        self.success('{} {} -> {}'.format(name, pid, path))
+                        self.success(f'{name} {pid} -> {path}')
 
                     except Exception as e:
-                        self.error('{} {}: {}'.format(name, pid, e))
+                        self.error(f'{name} {pid}: {e}')
 
                 for s in strings:
                     last_log.write(s+'\n')

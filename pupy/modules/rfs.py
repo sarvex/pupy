@@ -41,10 +41,9 @@ class PupyFUSE(fuse.FUSE):
                     if kwargs.pop(arg, False))
 
         kwargs.setdefault('fsname', operations.__class__.__name__)
-        args.append('-o')
-        args.append(','.join(self._normalize_fuse_options(**kwargs)))
-        args.append(mountpoint)
-
+        args.extend(
+            ('-o', ','.join(self._normalize_fuse_options(**kwargs)), mountpoint)
+        )
         args = [arg.encode(encoding) for arg in args]
         argv = (fuse.c_char_p * len(args))(*args)
 
@@ -105,7 +104,7 @@ class RFSManager(object):
             setattr(rops, opm, client.remote('os.path', opm, False))
 
         for oms in om_stat:
-            setattr(rops, oms, client.remote('pupyutils.basic_cmds', 'd'+oms))
+            setattr(rops, oms, client.remote('pupyutils.basic_cmds', f'd{oms}'))
 
         self._rops = rops
 
@@ -116,7 +115,7 @@ class RFSManager(object):
         lpath = os.path.abspath(lpath)
 
         if lpath in self._mounts:
-            raise ValueError('{} already mounted'.format(lpath))
+            raise ValueError(f'{lpath} already mounted')
 
         self._mounts[lpath] = PupyFUSE(
             PupyRFS(rpath, self._rops), lpath,
@@ -133,16 +132,14 @@ class RFSManager(object):
 
     def umount(self, lpath):
         if lpath not in self._mounts:
-            raise ValueError('Unregistered mount point {}'.format(lpath))
+            raise ValueError(f'Unregistered mount point {lpath}')
 
         for x in psutil.process_iter(['open_files']):
             try:
-                pid, dirs = x.pid, set([
-                    os.path.abspath(y.path) for y in x.open_files()
-                ])
+                pid, dirs = x.pid, {os.path.abspath(y.path) for y in x.open_files()}
 
                 for d in dirs:
-                    if d == lpath or d.startswith(lpath+'/'):
+                    if d == lpath or d.startswith(f'{lpath}/'):
                         x.kill(pid)
                         break
 
@@ -229,10 +226,19 @@ class PupyRFS(Operations):
         full_path = self._full_path(path)
         st = self.rops.lstat(full_path)
 
-        return dict((key, st.get(key)) for key in (
-            'st_atime', 'st_ctime',
-            'st_gid', 'st_mode', 'st_mtime', 'st_nlink',
-            'st_size', 'st_uid'))
+        return {
+            key: st.get(key)
+            for key in (
+                'st_atime',
+                'st_ctime',
+                'st_gid',
+                'st_mode',
+                'st_mtime',
+                'st_nlink',
+                'st_size',
+                'st_uid',
+            )
+        }
 
     def readdir(self, path, fh):
         full_path = self._full_path(path)
@@ -242,8 +248,7 @@ class PupyRFS(Operations):
         if self.rops.isdir(full_path):
             dirents.extend(self.rops.listdir(full_path))
 
-        for r in dirents:
-            yield r
+        yield from dirents
 
     def readlink(self, path):
         pathname = self.rops.readlink(self._full_path(path))
@@ -266,11 +271,21 @@ class PupyRFS(Operations):
     def statfs(self, path):
         full_path = self._full_path(path)
         stv = self.rops.statvfs(full_path)
-        return dict((key, stv.get(key)) for key in (
-            'f_bavail', 'f_bfree',
-            'f_blocks', 'f_bsize', 'f_favail',
-            'f_ffree', 'f_files', 'f_flag',
-            'f_frsize', 'f_namemax'))
+        return {
+            key: stv.get(key)
+            for key in (
+                'f_bavail',
+                'f_bfree',
+                'f_blocks',
+                'f_bsize',
+                'f_favail',
+                'f_ffree',
+                'f_files',
+                'f_flag',
+                'f_frsize',
+                'f_namemax',
+            )
+        }
 
     def unlink(self, path):
         return self.rops.unlink(self._full_path(path))
@@ -364,4 +379,4 @@ class RemoteFS(PupyModule):
 
     def list(self, args, manager):
         for src,dst in manager.mounts.iteritems():
-            self.info('{} -> {}'.format(src, dst))
+            self.info(f'{src} -> {dst}')

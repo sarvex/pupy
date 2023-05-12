@@ -178,9 +178,7 @@ class UUID(object):
         self.__dict__['int'] = int
 
     def __cmp__(self, other):
-        if isinstance(other, UUID):
-            return cmp(self.int, other.int)
-        return NotImplemented
+        return cmp(self.int, other.int) if isinstance(other, UUID) else NotImplemented
 
     def __hash__(self):
         return hash(self.int)
@@ -196,8 +194,7 @@ class UUID(object):
 
     def __str__(self):
         hex = '%032x' % self.int
-        return '%s-%s-%s-%s-%s' % (
-            hex[:8], hex[8:12], hex[12:16], hex[16:20], hex[20:])
+        return f'{hex[:8]}-{hex[8:12]}-{hex[12:16]}-{hex[16:20]}-{hex[20:]}'
 
     def get_bytes(self):
         bytes = ''
@@ -268,7 +265,7 @@ class UUID(object):
     hex = property(get_hex)
 
     def get_urn(self):
-        return 'urn:uuid:' + str(self)
+        return f'urn:uuid:{str(self)}'
 
     urn = property(get_urn)
 
@@ -306,7 +303,7 @@ def _popen(command, args):
     # LC_ALL to ensure English output, 2>/dev/null to prevent output on
     # stderr (Note: we don't have an example where the words we search for
     # are actually localized, but in theory some system could do so.)
-    cmd = 'LC_ALL=C %s %s 2>/dev/null' % (executable, args)
+    cmd = f'LC_ALL=C {executable} {args} 2>/dev/null'
     return os.popen(cmd)
 
 def _find_mac(command, args, hw_identifiers, get_index):
@@ -321,8 +318,7 @@ def _find_mac(command, args, hw_identifiers, get_index):
                     if words[i] in hw_identifiers:
                         try:
                             word = words[get_index(i)]
-                            mac = int(word.replace(':', ''), 16)
-                            if mac:
+                            if mac := int(word.replace(':', ''), 16):
                                 return mac
                         except (ValueError, IndexError):
                             # Virtual interfaces, such as those provided by
@@ -392,8 +388,9 @@ def _ifconfig_getnode():
     """Get the hardware address on Unix by running ifconfig."""
     # This works on Linux ('' or '-a'), Tru64 ('-av'), but not all Unixes.
     for args in ('', '-a', '-av'):
-        mac = _find_mac('ifconfig', args, ['hwaddr', 'ether'], lambda i: i+1)
-        if mac:
+        if mac := _find_mac(
+            'ifconfig', args, ['hwaddr', 'ether'], lambda i: i + 1
+        ):
             return mac
 
 def _arp_getnode():
@@ -430,8 +427,7 @@ def _netstat_getnode():
                     words = line.rstrip().split()
                     word = words[i]
                     if len(word) == 17 and word.count(':') == 5:
-                        mac = int(word.replace(':', ''), 16)
-                        if mac:
+                        if mac := int(word.replace(':', ''), 16):
                             return mac
                 except (ValueError, IndexError):
                     pass
@@ -485,7 +481,7 @@ def _ipconfig_getnode():
         buffer = ctypes.c_buffer(6)
         addlen = ctypes.c_ulong(ctypes.sizeof(buffer))
         if SendARP(inetaddr, 0, ctypes.byref(buffer), ctypes.byref(addlen)) != 0:
-            raise WindowsError('Retreival of mac address(%s) - failed' % host)
+            raise WindowsError(f'Retreival of mac address({host}) - failed')
 
         # Convert binary data into an int.
         return int(''.join("%02x"%(x) for x in struct.unpack('BBBBBB', buffer)), 16)
@@ -676,15 +672,16 @@ def _netiface_getnode():
             addr = inet_ntop(family, sa.sin6_addr)
         return family, addr
 
+
+
     class NetworkInterface(object):
         def __init__(self, name):
             self.name = name
             self.addresses = {}
 
         def __str__(self):
-            return "%s [IPv4=%s, IPv6=%s]" % (
-                self.name, self.addresses.get(AF_INET),
-                self.addresses.get(AF_INET6))
+            return f"{self.name} [IPv4={self.addresses.get(AF_INET)}, IPv6={self.addresses.get(AF_INET6)}]"
+
 
     def get_network_interfaces():
         ifap = POINTER(struct_ifaddrs)()
@@ -704,7 +701,7 @@ def _netiface_getnode():
                 family, addr = getfamaddr(ifa.ifa_addr.contents)
                 if addr:
                     if family not in i.addresses:
-                        i.addresses[family] = list()
+                        i.addresses[family] = []
                     i.addresses[family].append(addr)
 
             return retval.values()
@@ -835,7 +832,7 @@ def uuid4():
         return UUID(bytes=os.urandom(16), version=4)
     except:
         import random
-        bytes = [chr(random.randrange(256)) for i in range(16)]
+        bytes = [chr(random.randrange(256)) for _ in range(16)]
         return UUID(bytes=bytes, version=4)
 
 def uuid5(namespace, name):

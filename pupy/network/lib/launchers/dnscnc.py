@@ -164,7 +164,11 @@ class DNSCommandClientLauncher(DnsCommandsClient):
     def on_connect(self, address, port, transport, proxy, hostname=None):
         logger.debug(
             'connect request: %s:%s %s %s%s',
-            address, port, transport, proxy, (' host=' + hostname) if hostname else ''
+            address,
+            port,
+            transport,
+            proxy,
+            f' host={hostname}' if hostname else '',
         )
 
         with self.lock:

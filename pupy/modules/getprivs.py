@@ -28,10 +28,9 @@ class GetPrivsModule(PupyModule):
             for privilege in args.privileges:
                 try:
                     enable_privilege(privilege)
-                    self.success('{} enabled'.format(privilege))
+                    self.success(f'{privilege} enabled')
                 except Exception as e:
-                    self.error('{} was not enabled: {}'.format(
-                        privilege, e.args[1]))
+                    self.error(f'{privilege} was not enabled: {e.args[1]}')
         else:
             get_currents_privs = self.client.remote('pupwinutils.security', 'get_currents_privs', False)
             privs = get_currents_privs()

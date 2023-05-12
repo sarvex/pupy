@@ -43,7 +43,7 @@ class MemoryDuplicate(PupyModule):
                 try:
                     listeningPort = int(input("[?] Give me the listening port to use on the target: "))
                 except Exception as e:
-                    self.warning("You have to give me a valid port. Try again. ({})".format(e))
+                    self.warning(f"You have to give me a valid port. Try again. ({e})")
             listeningAddress = addressPort.split(':')[0]
             listeningAddressPort = "{0}:{1}".format(listeningAddress, listeningPort)
             self.info("The new pupy instance will listen on {0} on the target".format(listeningAddressPort))
@@ -64,7 +64,9 @@ class MemoryDuplicate(PupyModule):
             self.client.desc['platform'],
             arch=self.client.arch
         )
-        self.success("Payload generated with the current config from {} - size={}".format(tpl, len(payload)))
+        self.success(
+            f"Payload generated with the current config from {tpl} - size={len(payload)}"
+        )
         self.success("Executing the payload from memory ...")
         if self.client.is_windows():
             exec_pe(

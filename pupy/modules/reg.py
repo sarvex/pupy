@@ -341,11 +341,16 @@ class reg(PupyModule):
             value = value.strip()
 
         self.log(
-            List([
-                Line('Value:', Color(
-                    value if ktype != 'BINARY' else repr(value), color)),
-                Line('Type:', Color(ktype, color)),
-            ], caption=Color(' > ' + name, color) if name else None)
+            List(
+                [
+                    Line(
+                        'Value:',
+                        Color(value if ktype != 'BINARY' else repr(value), color),
+                    ),
+                    Line('Type:', Color(ktype, color)),
+                ],
+                caption=Color(f' > {name}', color) if name else None,
+            )
         )
 
     def search(self, args):

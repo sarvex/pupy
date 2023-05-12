@@ -22,8 +22,7 @@ class Shares(PupyModule):
 
     @classmethod
     def init_argparse(cls):
-        example = 'Examples:\n'
-        example += '>> run shares local\n'
+        example = 'Examples:\n' + '>> run shares local\n'
         example += '>> run shares remote -u john -p password1 -d DOMAIN -t 192.168.0.1\n'
         example += '>> run shares remote -u john -H \'aad3b435b51404eeaad3b435b51404ee:da76f2c4c96028b7a6111aef4a50a94d\' -t 192.168.0.1\n'
 
@@ -50,14 +49,14 @@ class Shares(PupyModule):
                 if self.client.is_windows():
                     shared_folders = self.client.remote('pupwinutils.drives', 'shared_folders')
 
-                    folders = shared_folders()
-                    if not folders:
-                        return
+                    if folders := shared_folders():
+                        self.log(Table([{
+                            'Name': share_name,
+                            'Path': share_path
+                        } for share_name, share_path in folders], ['Name', 'Path']))
 
-                    self.log(Table([{
-                        'Name': share_name,
-                        'Path': share_path
-                    } for share_name, share_path in folders], ['Name', 'Path']))
+                    else:
+                        return
 
                 else:
                     self.warning('this module works only for windows. Try using: run shares remote -t 127.0.0.1')
@@ -70,12 +69,7 @@ class Shares(PupyModule):
             self.error("target (-t) parameter must be specify")
             return
 
-        if "/" in args.target:
-            hosts = IPNetwork(args.target)
-        else:
-            hosts = list()
-            hosts.append(args.target)
-
+        hosts = IPNetwork(args.target) if "/" in args.target else [args.target]
         connect = self.client.remote('pupyutils.share_enum', 'connect')
 
         for host in hosts:
@@ -85,14 +79,15 @@ class Shares(PupyModule):
 
             if 'error' in result:
                 if 'os' in result:
-                    self.error('{}:{} OS={} NAME={}: {}'.format(
-                        host, args.port, result['os'], result['name'], result['error']))
+                    self.error(
+                        f"{host}:{args.port} OS={result['os']} NAME={result['name']}: {result['error']}"
+                    )
                 else:
-                    self.error('{}:{}: {}'.format(
-                        host, args.port, result['error']))
+                    self.error(f"{host}:{args.port}: {result['error']}")
             else:
-                self.success('{}:{} OS=[{}] NAME=[{}] AUTH={}'.format(
-                    host, args.port, result['os'], result['name'], result['auth']))
+                self.success(
+                    f"{host}:{args.port} OS=[{result['os']}] NAME=[{result['name']}] AUTH={result['auth']}"
+                )
                 shares = [{
                     'SHARE': x[0],
                     'ACCESS': x[1]

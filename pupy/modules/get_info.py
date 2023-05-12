@@ -28,41 +28,26 @@ class GetInfo(PupyModule):
             "debug_logfile", "native", "proxy", "external_ip"
         ]
         pupyKeys = ["launcher", "launcher_args"]
-        windKeys = ["uac_lvl","intgty_lvl"]
         linuxKeys = []
         macKeys = []
 
-        infos = []
-
-        for k in commonKeys:
-            if k in self.client.desc:
-                infos.append((k, self.client.desc[k]))
-
+        infos = [(k, self.client.desc[k]) for k in commonKeys if k in self.client.desc]
         if self.client.is_windows():
-            for k in windKeys:
-                infos.append((k, self.client.desc[k]))
-
+            windKeys = ["uac_lvl","intgty_lvl"]
+            infos.extend((k, self.client.desc[k]) for k in windKeys)
             can_get_admin_access = self.client.remote(
                 'pupwinutils.security', 'can_get_admin_access', False)
 
             currentUserIsLocalAdmin = can_get_admin_access()
 
             value = '?'
-            if currentUserIsLocalAdmin:
-                value = 'Yes'
-            elif not currentUserIsLocalAdmin:
-                value = 'No'
-
+            value = 'Yes' if currentUserIsLocalAdmin else 'No'
             infos.append(('local_adm', value))
 
         elif self.client.is_linux():
-            for k in linuxKeys:
-                infos.append((k, self.client.desc[k]))
-
+            infos.extend((k, self.client.desc[k]) for k in linuxKeys)
         elif self.client.is_darwin():
-            for k in macKeys:
-                infos.append((k, self.client.desc[k]))
-
+            infos.extend((k, self.client.desc[k]) for k in macKeys)
         elif self.client.is_android():
             utils = self.client.remote('pupydroid.utils')
 
@@ -78,16 +63,24 @@ class GetInfo(PupyModule):
             wifiEnabled = utils.isWiFiEnabled()
             infos.append(("wifi_enabled",wifiConnected or wifiEnabled))
             infoBuild = utils.getInfoBuild()
-            infos.append(("device_name",infoBuild['deviceName']))
-            infos.append(("manufacturer",infoBuild['manufacturer']))
-            infos.append(("model",infoBuild['model']))
-            infos.append(("product",infoBuild['product']))
-            infos.append(("bootloader_version",infoBuild['bootloaderVersion']))
-            infos.append(("radio_version",infoBuild['radioVersion']))
-            infos.append(("release",infoBuild['release']))
+            infos.extend(
+                (
+                    ("device_name", infoBuild['deviceName']),
+                    ("manufacturer", infoBuild['manufacturer']),
+                    ("model", infoBuild['model']),
+                    ("product", infoBuild['product']),
+                    ("bootloader_version", infoBuild['bootloaderVersion']),
+                    ("radio_version", infoBuild['radioVersion']),
+                    ("release", infoBuild['release']),
+                )
+            )
             battery = utils.getBatteryStats()
-            infos.append(("battery_%",battery['percentage']))
-            infos.append(("is_charging",battery['isCharging']))
+            infos.extend(
+                (
+                    ("battery_%", battery['percentage']),
+                    ("is_charging", battery['isCharging']),
+                )
+            )
             simState = utils.getSimState()
             infos.append(("sim_state",simState))
             deviceId = utils.getDeviceId()
@@ -111,20 +104,20 @@ class GetInfo(PupyModule):
                 isNetworkRoaming = utils.isNetworkRoaming()
                 infos.append(("is_roaming",isNetworkRoaming))
             else:
-                #Print N/A when not applicable. These following lines can be removed from info if needed
-                infos.append(("phone_nb","N/A"))
-                infos.append(("sim_country","N/A"))
-                infos.append(("network_country","N/A"))
-                infos.append(("network_operator","N/A"))
-                infos.append(("device_id","N/A"))
-
+                infos.extend(
+                    (
+                        ("phone_nb", "N/A"),
+                        ("sim_country", "N/A"),
+                        ("network_country", "N/A"),
+                        ("network_operator", "N/A"),
+                        ("device_id", "N/A"),
+                    )
+                )
         for k in pupyKeys:
             if k in self.client.desc:
                 infos.append((k, self.client.desc[k]))
 
-        infos.append(('platform', '{}/{}'.format(
-            self.client.platform, self.client.arch or '?'
-        )))
+        infos.append(('platform', f"{self.client.platform}/{self.client.arch or '?'}"))
 
         #For remplacing None or "" value by "?"
         infoTemp = []

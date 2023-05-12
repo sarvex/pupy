@@ -341,10 +341,9 @@ class Buffer(object):
 
                 lchunk = len(chunk)
 
-                if n is not None:
-                    if total_read + lchunk > n:
-                        chunk = chunk[:n - total_read]
-                        self._bofft = bofft + n - total_read
+                if n is not None and total_read + lchunk > n:
+                    chunk = chunk[:n - total_read]
+                    self._bofft = bofft + n - total_read
 
                 total_read += len(chunk)
 
@@ -451,14 +450,10 @@ class Buffer(object):
             del self._data[:todel]
 
     def chunksinfo(self):
-        result = ''
-        if self._bofft:
-            result = "+{}:".format(self._bofft)
+        result = f"+{self._bofft}:" if self._bofft else ''
+        result += ','.join(f'{len(x)}:{type(x).__name__}' for x in self._data)
 
-        result += ','.join(
-            '{}:{}'.format(len(x), type(x).__name__) for x in self._data)
-
-        return '<Buffer: {}>'.format(result)
+        return f'<Buffer: {result}>'
 
     def __len__(self):
         """Returns length of buffer. Used in len()."""

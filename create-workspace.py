@@ -78,9 +78,10 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    '-B', '--bin-path', default=default_local_bin_location,
-    help='Store pupy launch wrapper to this folder (default={})'.format(
-        default_local_bin_location)
+    '-B',
+    '--bin-path',
+    default=default_local_bin_location,
+    help=f'Store pupy launch wrapper to this folder (default={default_local_bin_location})',
 )
 
 parser.add_argument('workdir', help='Location of workdir')
@@ -108,7 +109,7 @@ _ESCAPE = (
 
 
 def shstr(string):
-    if not any(esc in string for esc in _ESCAPE):
+    if all(esc not in string for esc in _ESCAPE):
         return string
 
     result = ['"']
@@ -149,10 +150,7 @@ def check_programs(programs, available=False):
         except (OSError, subprocess.CalledProcessError):
             messages.append(message)
 
-    if available:
-        return ok
-    else:
-        return messages
+    return ok if available else messages
 
 
 def check_modules(modules):
@@ -162,9 +160,7 @@ def check_modules(modules):
         try:
             __import__(module)
         except ImportError:
-            messages.append(
-                'Missing python module: {}'.format(module)
-            )
+            messages.append(f'Missing python module: {module}')
 
     return messages
 
@@ -195,7 +191,7 @@ def get_changed_files(git_folder, prev_ref, current_ref='HEAD'):
 
 def build_templates(
         git_folder, docker_repo, orchestrator, templates, tag, persistent):
-    print("[+] Compile templates: {}".format(templates))
+    print(f"[+] Compile templates: {templates}")
 
     if docker_repo.lower().strip() == 'local':
         docker_repo = ''
@@ -203,16 +199,14 @@ def build_templates(
     repo = ''
 
     if docker_repo:
-        repo = docker_repo + '/'
+        repo = f'{docker_repo}/'
     elif orchestrator == 'podman':
         repo = 'localhost' + '/'
 
     update_commands = []
 
     for template in templates:
-        container_name = 'build-pupy-' + template + '-' + get_place_digest(
-            git_folder
-        )
+        container_name = f'build-pupy-{template}-{get_place_digest(git_folder)}'
 
         create_template = False
 
@@ -225,8 +219,7 @@ def build_templates(
             create_template = True
 
         if create_template:
-            print("[+] Build {} using {} (create)".format(
-                template, container_name))
+            print(f"[+] Build {template} using {container_name} (create)")
 
             args = [
                 orchestrator, 'run'
@@ -235,15 +228,19 @@ def build_templates(
             if not persistent:
                 args.append('--rm')
 
-            args.extend([
-                '--name=' + container_name,
-                '--ulimit', 'nofile=65535:65535',
-                '--security-opt', 'label=disable',
-                '--mount', 'type=bind,src=' + git_folder +
-                ',target=/build/workspace/project',
-                repo + 'tc-' + template + ':' + tag,
-                'client/' + TEMPLATES[template] + '/build-docker.sh'
-            ])
+            args.extend(
+                [
+                    f'--name={container_name}',
+                    '--ulimit',
+                    'nofile=65535:65535',
+                    '--security-opt',
+                    'label=disable',
+                    '--mount',
+                    f'type=bind,src={git_folder},target=/build/workspace/project',
+                    f'{repo}tc-{template}:{tag}',
+                    f'client/{TEMPLATES[template]}/build-docker.sh',
+                ]
+            )
 
             try:
                 subprocess.check_call(args, stderr=subprocess.STDOUT)
@@ -254,15 +251,12 @@ def build_templates(
                 raise
 
             if persistent:
-                update_commands.append(
-                    orchestrator + ' start -a ' + shstr(container_name)
-                )
+                update_commands.append(f'{orchestrator} start -a {shstr(container_name)}')
             else:
                 update_commands.append(shjoin(args))
 
         else:
-            print("[+] Build {} using {} (existing)".format(
-                template, container_name))
+            print(f"[+] Build {template} using {container_name} (existing)")
 
             try:
                 subprocess.check_call([
@@ -274,9 +268,7 @@ def build_templates(
 
                 raise
 
-            update_commands.append(
-                orchestrator + ' start -a ' + shstr(container_name)
-            )
+            update_commands.append(f'{orchestrator} start -a {shstr(container_name)}')
 
     return update_commands
 
@@ -289,9 +281,7 @@ def makedirs_p(dirpath):
     try:
         os.makedirs(dirpath)
     except OSError as e:
-        if e.errno == errno.EEXIST:
-            pass
-        else:
+        if e.errno != errno.EEXIST:
             raise
 
 
@@ -338,7 +328,7 @@ def create_virtualenv(workdir, git_path, orchestrator=None, templates=[]):
     ]
 
     update_commands = [
-        'cd {}'.format(git_path),
+        f'cd {git_path}',
         'prev_ref=`git rev-parse HEAD`',
         'git pull --recurse-submodules=yes --autostash --rebase',
         'if (git diff --name-only $prev_ref HEAD | grep client/ >/dev/null)'
@@ -347,13 +337,12 @@ def create_virtualenv(workdir, git_path, orchestrator=None, templates=[]):
 
     if orchestrator and templates:
         for target in templates:
-            update_commands.extend([
-                'echo "[+] Rebuilding templates for {}"'.format(target),
-                '{} start -a build-pupy-{}-{}'.format(
-                    orchestrator, target,
-                    get_place_digest(git_path)
-                )
-            ])
+            update_commands.extend(
+                [
+                    f'echo "[+] Rebuilding templates for {target}"',
+                    f'{orchestrator} start -a build-pupy-{target}-{get_place_digest(git_path)}',
+                ]
+            )
     else:
         update_commands.extend([
             'echo "[-] You must update templates manually"'
@@ -369,7 +358,7 @@ def create_virtualenv(workdir, git_path, orchestrator=None, templates=[]):
 def create_container_env(
         workdir, git_path, orchestrator, network, templates=[], squash=False):
 
-    print("[+] Build {} image ({})".format(orchestrator, ENV_IMAGE))
+    print(f"[+] Build {orchestrator} image ({ENV_IMAGE})")
 
     build_command = [
         orchestrator, 'build'
@@ -390,9 +379,7 @@ def create_container_env(
                 orchestrator, 'inspect', ENV_IMAGE
             ], stdout=devnull, stderr=devnull)
     except subprocess.CalledProcessError:
-        print("[+] Create pupysh environment image {}".format(
-            ENV_IMAGE
-        ))
+        print(f"[+] Create pupysh environment image {ENV_IMAGE}")
 
         subprocess.check_call(build_command, stderr=subprocess.STDOUT)
 
@@ -400,34 +387,37 @@ def create_container_env(
         workdir, git_path
     )
 
-    print("[+] Create podman container ({})".format(container_name))
+    print(f"[+] Create podman container ({container_name})")
 
     create_command = [
-        orchestrator, 'create',
-        '--security-opt', 'label=disable',
-        '--hostname=pupy', '--network=' + network,
-        '--name='+container_name,
-        '--interactive', '--tty',
-        '--mount', 'type=bind,src=' + os.path.join(
-                git_path, 'pupy') + ',target=/pupy',
-        '--mount', 'type=bind,src=' + workdir + ',target=/project',
-        ENV_IMAGE
+        orchestrator,
+        'create',
+        '--security-opt',
+        'label=disable',
+        '--hostname=pupy',
+        f'--network={network}',
+        f'--name={container_name}',
+        '--interactive',
+        '--tty',
+        '--mount',
+        'type=bind,src=' + os.path.join(git_path, 'pupy') + ',target=/pupy',
+        '--mount',
+        f'type=bind,src={workdir},target=/project',
+        ENV_IMAGE,
     ]
 
     subprocess.check_call(create_command, stderr=subprocess.STDOUT)
 
-    shell_commands = [
-        'exec {} start -ai {}'.format(orchestrator, container_name)
-    ]
+    shell_commands = [f'exec {orchestrator} start -ai {container_name}']
 
     update_commands = [
-        'cd {}'.format(git_path),
+        f'cd {git_path}',
         'prev_ref=`git rev-parse HEAD`',
         'git pull --recurse-submodules=yes --autostash --rebase',
-        'echo "[+] Update {} environment"'.format(orchestrator),
+        f'echo "[+] Update {orchestrator} environment"',
         shjoin(build_command),
-        orchestrator + ' kill ' + container_name + ' || true',
-        orchestrator + ' rm ' + container_name,
+        f'{orchestrator} kill {container_name} || true',
+        f'{orchestrator} rm {container_name}',
         shjoin(create_command),
         'if (git diff --name-only $prev_ref HEAD | grep client/ >/dev/null)',
         'then',
@@ -435,12 +425,12 @@ def create_container_env(
 
     if templates:
         for target in templates:
-            update_commands.extend([
-                'echo "[+] Rebuilding templates for {}"'.format(target),
-                '{} start -a build-pupy-{}-{}'.format(
-                    orchestrator, target, get_place_digest(git_path)
-                )
-            ])
+            update_commands.extend(
+                [
+                    f'echo "[+] Rebuilding templates for {target}"',
+                    f'{orchestrator} start -a build-pupy-{target}-{get_place_digest(git_path)}',
+                ]
+            )
     else:
         update_commands.extend([
             'echo "[-] You must update templates manually"'
@@ -473,8 +463,6 @@ def main():
 
     required_programs = {'git'}
     required_modules = set()
-    required_abis = set()
-
     if sys.version_info.major == 3 and args.environment == 'virtualenv':
         sys.exit(
             "Python 3 is not supported. If your can't or don't want"
@@ -496,22 +484,22 @@ def main():
         required_programs.add(args.environment)
 
     if not args.do_not_compile_templates:
-        required_abis.add('vsyscall32')
+        required_abis = {'vsyscall32'}
+
         required_programs.add(default_orchestrator)
 
     workdir = os.path.abspath(args.workdir)
 
     if not os.path.isfile(
             os.path.join(args.pupy_git_folder, 'create-workspace.py')):
-        sys.exit('{} is not pupy project folder'.format(
-            args.pupy_git_folder))
+        sys.exit(f'{args.pupy_git_folder} is not pupy project folder')
 
     if os.path.isdir(workdir) and os.listdir(workdir):
-        sys.exit('{} is not empty'.format(workdir))
+        sys.exit(f'{workdir} is not empty')
 
     git_folder = os.path.abspath(args.pupy_git_folder)
 
-    print("[+] Git repo at {}".format(git_folder))
+    print(f"[+] Git repo at {git_folder}")
 
     messages = []
 
@@ -546,10 +534,10 @@ def main():
 
     if not args.do_not_compile_templates:
         templates.extend(
-            set(
-                template.lower().strip() for template in
-                args.compile_templates.split(',')
-            )
+            {
+                template.lower().strip()
+                for template in args.compile_templates.split(',')
+            }
         )
 
         update_commands.extend(
@@ -571,21 +559,19 @@ def main():
             args.network, templates, args.squash
         )
 
-        update_commands.extend(update_cmds)
-
     else:
         shell_cmds, update_cmds = create_virtualenv(
             workdir, git_folder, 'docker', templates
         )
 
-        update_commands.extend(update_cmds)
+    update_commands.extend(update_cmds)
 
     print("[+] Initialize workdir")
     initialize_workdir(workdir, git_folder)
 
     wrappers = ("pupysh", "pupygen")
 
-    print("[+] Create {} wrappers".format(','.join(wrappers)))
+    print(f"[+] Create {','.join(wrappers)} wrappers")
 
     pupysh_update_path = os.path.join(workdir, 'bin', 'pupysh-update')
     pupysh_path = os.path.join(workdir, 'bin', 'pupysh')
@@ -610,7 +596,7 @@ def main():
 
     if args.bin_path:
         bin_path = os.path.abspath(args.bin_path)
-        print("[+] Store symlink to pupysh to {}".format(bin_path))
+        print(f"[+] Store symlink to pupysh to {bin_path}")
 
         if not os.path.isdir(bin_path):
             os.makedirs(bin_path)
@@ -628,14 +614,12 @@ def main():
                 os.unlink(sympath)
 
             elif os.path.exists(sympath):
-                sys.exit(
-                    "[-] File at {} already exists and not symlink".format(
-                        sympath))
+                sys.exit(f"[-] File at {sympath} already exists and not symlink")
 
             os.symlink(src, sympath)
 
         if bin_path not in os.environ['PATH']:
-            print("[-] {} is not in your PATH!".format(bin_path))
+            print(f"[-] {bin_path} is not in your PATH!")
         else:
             print("[I] To execute pupysh:")
             print("~ > pupysh")
@@ -644,9 +628,9 @@ def main():
 
     else:
         print("[I] To execute pupysh:")
-        print("~ > {}".format(pupysh_path))
+        print(f"~ > {pupysh_path}")
         print("[I] To update:")
-        print("~ > {}".format(pupysh_update_path))
+        print(f"~ > {pupysh_update_path}")
 
 
 if __name__ == '__main__':

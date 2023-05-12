@@ -29,11 +29,9 @@ class LoadPackageModule(PupyModule):
             else:
                 self.error('the dll was already loaded')
         elif args.remove:
-            invalidated = self.client.invalidate_packages([args.package])
-            if invalidated:
+            if invalidated := self.client.invalidate_packages([args.package]):
                 self.success('package invalidated')
+        elif self.client.load_package(args.package, force=args.force):
+            self.success('package loaded')
         else:
-            if self.client.load_package(args.package, force=args.force):
-                self.success('package loaded')
-            else:
-                self.warning('package is already loaded')
+            self.warning('package is already loaded')

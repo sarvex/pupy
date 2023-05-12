@@ -20,15 +20,11 @@ def str2bool(bstr):
     return bool(int(bstr))
 
 def getProtoId(proto_name):
-    if isinstance(proto_name, int):
-        if proto_name > 0 and proto_name <= 65535:
-            return proto_name
+    if isinstance(proto_name, int) and proto_name > 0 and proto_name <= 65535:
+        return proto_name
 
-    proto_name = 'IPPROTO_{}'.format(proto_name)
-    if not hasattr(socket, proto_name):
-        return False
-
-    return getattr(socket, proto_name)
+    proto_name = f'IPPROTO_{proto_name}'
+    return getattr(socket, proto_name) if hasattr(socket, proto_name) else False
 
 class UPNPError(Exception):
     def __init__(self, hcode, ucode, udes):
@@ -128,11 +124,7 @@ class IGDClient(object):
             self.bindIP = netaddr.IPAddress(bindIP)
             self.isv6  = self.bindIP.version == 6
 
-            if self.isv6:
-                self.igdsvc = "IP6FWCTL"
-            else:
-                self.igdsvc = "WANIPC"
-
+            self.igdsvc = "IP6FWCTL" if self.isv6 else "WANIPC"
             self.discovery()
             self.discovery(st='upnp:rootdevice')
 
@@ -331,13 +323,13 @@ class IGDClient(object):
     def GetExternalIP(self):
         upnp_method = 'GetExternalIPAddress'
         sendArgs = {}
-        resp_xml = self.sendSOAP(
+        if resp_xml := self.sendSOAP(
             self.pr.netloc,
             'urn:schemas-upnp-org:service:WANIPConnection:1',
-            self.ctrlURL, upnp_method, sendArgs
-        )
-
-        if resp_xml:
+            self.ctrlURL,
+            upnp_method,
+            sendArgs,
+        ):
             return self._get1stTagText(resp_xml, [
                 "NewExternalIPAddress"
             ])
@@ -364,13 +356,14 @@ class IGDClient(object):
             'NewPortMappingIndex': (index, 'ui4'),
         }
 
-        resp_xml = self.sendSOAP(
+        if resp_xml := self.sendSOAP(
             self.pr.netloc,
             'urn:schemas-upnp-org:service:WANIPConnection:1',
-            self.ctrlURL, upnp_method, sendArgs, hideErr=hideErr
-        )
-
-        if resp_xml:
+            self.ctrlURL,
+            upnp_method,
+            sendArgs,
+            hideErr=hideErr,
+        ):
             return self._get1stTagText(resp_xml, [
                 "NewExternalPort", "NewRemoteHost",
                 "NewProtocol", "NewInternalPort",
@@ -386,13 +379,13 @@ class IGDClient(object):
             'NewProtocol': (proto, 'string'),
         }
 
-        resp_xml = self.sendSOAP(
+        if resp_xml := self.sendSOAP(
             self.pr.netloc,
             'urn:schemas-upnp-org:service:WANIPConnection:1',
-            self.ctrlURL, upnp_method, sendArgs
-        )
-
-        if resp_xml:
+            self.ctrlURL,
+            upnp_method,
+            sendArgs,
+        ):
             return self._get1stTagText(resp_xml, [
                 "NewInternalPort",
                 "NewInternalClient", "NewPortMappingDescription",
@@ -402,14 +395,13 @@ class IGDClient(object):
     def GetNATRSIPStatus(self):
         upnp_method = 'GetNATRSIPStatus'
         sendArgs = {}
-        resp_xml = self.sendSOAP(
+        if resp_xml := self.sendSOAP(
             self.pr.netloc,
             'urn:schemas-upnp-org:service:WANIPConnection:1',
             self.ctrlURL,
             upnp_method,
-            sendArgs)
-
-        if resp_xml:
+            sendArgs,
+        ):
             return self._get1stTagText(resp_xml, [
                 "NewRSIPAvailable",
                 "NewNATEnabled",
@@ -418,13 +410,13 @@ class IGDClient(object):
     def GetWarnDisconnectDelay(self):
         upnp_method = 'GetWarnDisconnectDelay'
         sendArgs = {}
-        resp_xml = self.sendSOAP(
+        if resp_xml := self.sendSOAP(
             self.pr.netloc,
             'urn:schemas-upnp-org:service:WANIPConnection:1',
             self.ctrlURL,
             upnp_method,
-            sendArgs)
-        if resp_xml:
+            sendArgs,
+        ):
             return self._get1stTagText(resp_xml, [
                 "NewWarnDisconnectDelay",
             ])
@@ -432,13 +424,13 @@ class IGDClient(object):
     def GetIdleDisconnectTime(self):
         upnp_method = 'GetIdleDisconnectTime'
         sendArgs = {}
-        resp_xml = self.sendSOAP(
+        if resp_xml := self.sendSOAP(
             self.pr.netloc,
             'urn:schemas-upnp-org:service:WANIPConnection:1',
             self.ctrlURL,
             upnp_method,
-            sendArgs)
-        if resp_xml:
+            sendArgs,
+        ):
             return self._get1stTagText(resp_xml, [
                 "NewIdleDisconnectTime",
             ])
@@ -446,13 +438,13 @@ class IGDClient(object):
     def GetAutoDisconnectTime(self):
         upnp_method = 'GetAutoDisconnectTime'
         sendArgs = {}
-        resp_xml = self.sendSOAP(
+        if resp_xml := self.sendSOAP(
             self.pr.netloc,
             'urn:schemas-upnp-org:service:WANIPConnection:1',
             self.ctrlURL,
             upnp_method,
-            sendArgs)
-        if resp_xml:
+            sendArgs,
+        ):
             return self._get1stTagText(resp_xml, [
                 "NewAutoDisconnectTime",
             ])
@@ -460,13 +452,13 @@ class IGDClient(object):
     def GetStatusInfo(self):
         upnp_method = 'GetStatusInfo'
         sendArgs = {}
-        resp_xml = self.sendSOAP(
+        if resp_xml := self.sendSOAP(
             self.pr.netloc,
             'urn:schemas-upnp-org:service:WANIPConnection:1',
             self.ctrlURL,
             upnp_method,
-            sendArgs)
-        if resp_xml:
+            sendArgs,
+        ):
             return self._get1stTagText(resp_xml, [
                 "NewConnectionStatus",
                 "NewLastConnectionError",
@@ -541,13 +533,13 @@ class IGDClient(object):
     def GetConnectionTypeInfo(self):
         upnp_method = 'GetConnectionTypeInfo'
         sendArgs = {}
-        resp_xml = self.sendSOAP(
+        if resp_xml := self.sendSOAP(
             self.pr.netloc,
             'urn:schemas-upnp-org:service:WANIPConnection:1',
             self.ctrlURL,
             upnp_method,
-            sendArgs)
-        if resp_xml:
+            sendArgs,
+        ):
             return self._get1stTagText(resp_xml, [
                 "NewConnectionType",
                 "NewPossibleConnectionTypes", ])
@@ -578,57 +570,40 @@ class IGDClient(object):
         """
         upnp_method = method_name
         sendArgs = dict(in_args)
-        resp_xml = self.sendSOAP(
+        return self.sendSOAP(
             self.pr.netloc,
-            'urn:schemas-upnp-org:service:{svc}:1'.format(
-                svc=svc),
+            'urn:schemas-upnp-org:service:{svc}:1'.format(svc=svc),
             self.ctrlURL,
             upnp_method,
-            sendArgs
+            sendArgs,
         )
-
-        return resp_xml
 
     def sendSOAP(self, hostName, serviceType, controlURL, actionName,
                  actionArguments, hideErr=False):
         """
         send a SOAP request and get the response
         """
-        argList = ''
-
         if not controlURL:
             self.discovery()
 
-        # Create a string containing all of the SOAP action's arguments and
-        # values
-        for arg, (val, dt) in actionArguments.iteritems():
-            argList += '<%s>%s</%s>' % (arg, val, arg)
-
-        # Create the SOAP request
-        soapBody = '<?xml version="1.0"?>' \
-          '<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope" ' \
-          'SOAP-ENV:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">' \
-          '<SOAP-ENV:Body>' \
-          '<m:{} xmlns:m="{}">' \
-          '{}' \
-          '</m:{}>' \
-          '</SOAP-ENV:Body>' \
-          '</SOAP-ENV:Envelope>'.format(
-              actionName,
-              serviceType,
-              argList,
-              actionName
+        argList = ''.join(
+            f'<{arg}>{val}</{arg}>'
+            for arg, (val, dt) in actionArguments.iteritems()
         )
+        # Create the SOAP request
+        soapBody = f'<?xml version="1.0"?><SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope" SOAP-ENV:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><SOAP-ENV:Body><m:{actionName} xmlns:m="{serviceType}">{argList}</m:{actionName}></SOAP-ENV:Body></SOAP-ENV:Envelope>'
 
         try:
             response = urllib2.urlopen(
-                urllib2.Request(controlURL, soapBody, {
-                    'Content-Type': 'text/xml',
-                    'SOAPAction': '"{}#{}"'.format(
-                        serviceType,
-                        actionName
-                    )
-                }))
+                urllib2.Request(
+                    controlURL,
+                    soapBody,
+                    {
+                        'Content-Type': 'text/xml',
+                        'SOAPAction': f'"{serviceType}#{actionName}"',
+                    },
+                )
+            )
         except urllib2.HTTPError as e:
             err_code, err_desc = self._parseErrMsg(e.read())
             raise UPNPError(e.code, err_code, err_desc)
@@ -639,13 +614,13 @@ class IGDClient(object):
     def GetFWStatus(self):
         upnp_method = 'GetFirewallStatus'
         sendArgs = {}
-        resp_xml = self.sendSOAP(
+        if resp_xml := self.sendSOAP(
             self.pr.netloc,
             'urn:schemas-upnp-org:service:WANIPv6FirewallControl:1',
             self.ctrlURL,
             upnp_method,
-            sendArgs)
-        if resp_xml:
+            sendArgs,
+        ):
             return self._get1stTagText(resp_xml, [
                 "FirewallEnabled", "InboundPinholeAllowed"])
 
@@ -744,13 +719,13 @@ class IGDClient(object):
         sendArgs = {
             "UniqueID": (uid, 'ui2'),
         }
-        resp_xml = self.sendSOAP(
+        if resp_xml := self.sendSOAP(
             self.pr.netloc,
             'urn:schemas-upnp-org:service:WANIPv6FirewallControl:1',
             self.ctrlURL,
             upnp_method,
-            sendArgs)
-        if resp_xml:
+            sendArgs,
+        ):
             return self._get1stTagText(resp_xml, [
                 "PinholePackets",
             ])
@@ -760,13 +735,13 @@ class IGDClient(object):
         sendArgs = {
             "UniqueID": (uid, 'ui2'),
         }
-        resp_xml = self.sendSOAP(
+        if resp_xml := self.sendSOAP(
             self.pr.netloc,
             'urn:schemas-upnp-org:service:WANIPv6FirewallControl:1',
             self.ctrlURL,
             upnp_method,
-            sendArgs)
-        if resp_xml:
+            sendArgs,
+        ):
             return self._get1stTagText(resp_xml, [
                 "IsWorking",
             ])

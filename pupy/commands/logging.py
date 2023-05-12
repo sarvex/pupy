@@ -41,10 +41,11 @@ def do(server, handler, config, args):
     if args.set_level or args.level:
         level = args.set_level or args.level
         logger.setLevel(level.upper())
-        handler.display(Success('Log level: {}: {}'.format(logger.name, level)))
+        handler.display(Success(f'Log level: {logger.name}: {level}'))
     elif args.get_level:
-        handler.display(Success('Log level: {}'.format(
-            levelToString(logger.getEffectiveLevel()))))
+        handler.display(
+            Success(f'Log level: {levelToString(logger.getEffectiveLevel())}')
+        )
     else:
         objects = []
         for name, logger in logging.Logger.manager.loggerDict.iteritems():

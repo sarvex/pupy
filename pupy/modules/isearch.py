@@ -13,7 +13,7 @@ def escape(x):
     if "'" in x:
         x = x.replace("'", "")
 
-    return "'" + x + "'"
+    return f"'{x}'"
 
 @config(cat='gather', compat='windows')
 class IndexSearchModule(PupyModule):
@@ -48,14 +48,16 @@ class IndexSearchModule(PupyModule):
         if args.raw:
             request = args.raw
         else:
-            request.append('SELECT TOP {} System.ItemUrl, System.Size, System.DateModified FROM SYSTEMINDEX'.format(args.limit))
+            request.append(
+                f'SELECT TOP {args.limit} System.ItemUrl, System.Size, System.DateModified FROM SYSTEMINDEX'
+            )
             where = []
             if args.text:
-                where.append('FREETEXT({})'.format(escape(args.text)))
+                where.append(f'FREETEXT({escape(args.text)})')
             if args.directory:
-                where.append('SCOPE={}'.format(escape('file:'+args.directory)))
+                where.append(f"SCOPE={escape(f'file:{args.directory}')}")
             if args.path:
-                where.append('CONTAINS(System.FileName, {})'.format(escape(args.path)))
+                where.append(f'CONTAINS(System.FileName, {escape(args.path)})')
 
             if where:
                 request.append('WHERE')
@@ -70,7 +72,7 @@ class IndexSearchModule(PupyModule):
         text = ' '.join(request)
 
         if args.verbose:
-            self.info('QUERY: {}'.format(text))
+            self.info(f'QUERY: {text}')
 
         idx, cidx, data, error = query(text, args.limit)
         if error:
@@ -84,20 +86,23 @@ class IndexSearchModule(PupyModule):
 
             if args.raw:
                 legend = False
-                for record in data:
-                    objects.append({
-                        str(idx):v for idx,v in enumerate(record)
-                    })
+                objects.extend(
+                    {str(idx): v for idx, v in enumerate(record)}
+                    for record in data
+                )
                 header = [
                     str(x) for x in xrange(cidx+1)
                 ]
             else:
                 header = ['File', 'Size', 'Modified']
-                for record in data:
-                    objects.append({
-                        'File': record[0][5:] if record[0].startswith('file:') else record[0],
+                objects.extend(
+                    {
+                        'File': record[0][5:]
+                        if record[0].startswith('file:')
+                        else record[0],
                         'Size': record[1],
-                        'Modified': datetime.fromtimestamp(record[2])
-                    })
-
+                        'Modified': datetime.fromtimestamp(record[2]),
+                    }
+                    for record in data
+                )
             self.log(TruncateToTerm(Table(objects, header, legend=legend)))

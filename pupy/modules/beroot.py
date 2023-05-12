@@ -23,8 +23,10 @@ class Beroot(PupyModule):
         """
         Check the project on github: https://github.com/AlessandroZ/BeRoot
         """
-        header = '|====================================================================|\n'
-        header += '|                                                                    |\n'
+        header = (
+            '|====================================================================|\n'
+            + '|                                                                    |\n'
+        )
         header += '|                        The BeRoot Project                          |\n'
         header += '|                                                                    |\n'
         header += '|                          ! BANG BANG !                             |\n'
@@ -40,8 +42,7 @@ class Beroot(PupyModule):
 
         run_beroot = self.client.remote('beroot.run', 'run')
         if self.client.is_windows():
-            results = run_beroot()
-            if results:
+            if results := run_beroot():
                 for r in results:
                     self.windows_output(r)
             else:

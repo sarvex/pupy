@@ -12,9 +12,8 @@ def shell_exec(client, cmdline, shell=None, env=None, encoding=None):
     res = ''
 
     try:
-        if client.is_android():
-            if shell is None:
-                shell="/system/bin/sh"
+        if client.is_android() and shell is None:
+            shell="/system/bin/sh"
         if shell is None:
             res = check_output(
                 cmdline,
@@ -39,11 +38,7 @@ def shell_exec(client, cmdline, shell=None, env=None, encoding=None):
             )
 
     except Exception as e:
-        if hasattr(e, 'output') and e.output:
-            res = e.output
-        else:
-            res = str(e)
-
+        res = e.output if hasattr(e, 'output') and e.output else str(e)
     if encoding:
         try:
             res = res.decode(encoding)

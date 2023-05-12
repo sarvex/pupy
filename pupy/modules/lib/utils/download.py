@@ -15,11 +15,9 @@ import os.path
 import zlib
 import errno
 
-FIELDS_MAP = {
-    x:y for x,y in enumerate([
-        'st_mtime', 'st_gid', 'st_uid', 'st_mode', 'st_rdev'
-    ])
-}
+FIELDS_MAP = dict(
+    enumerate(['st_mtime', 'st_gid', 'st_uid', 'st_mode', 'st_rdev'])
+)
 
 F_TYPE     = 0
 F_PATH     = 1
@@ -165,11 +163,9 @@ class DownloadFronted(object):
 
         if self._verbose:
             if self._archive:
-                self._verbose('Download: {} -> tgz:{}'.format(
-                    remote_file, self.dest_file))
+                self._verbose(f'Download: {remote_file} -> tgz:{self.dest_file}')
             else:
-                self._verbose('Download: {} -> {}'.format(
-                    remote_file, self.dest_file))
+                self._verbose(f'Download: {remote_file} -> {self.dest_file}')
 
         self.process()
         self._terminate = None
@@ -221,7 +217,7 @@ class DownloadFronted(object):
             return
 
         if exception and self._error:
-            self._error('{}'.format(exception))
+            self._error(f'{exception}')
 
         if not data:
             self._completed.set()
@@ -236,17 +232,12 @@ class DownloadFronted(object):
                 self._handle_msg(msg)
 
     def _split_path(self, path):
-        _path = []
-        for portion in path.split('/'):
-            _path.append(portion)
-
+        _path = list(path.split('/'))
         path = _path
         _path = []
 
         for p in path:
-            for portion in p.split('\\'):
-                _path.append(portion)
-
+            _path.extend(iter(p.split('\\')))
         return _path
 
     def _check_path(self, path):
@@ -254,7 +245,7 @@ class DownloadFronted(object):
 
     def _check_name(self, name):
         if os.path.sep in name or name == '..':
-            raise ValueError('Invalid path: {}'.format(name))
+            raise ValueError(f'Invalid path: {name}')
         return name
 
     def _get_path(self, msg):

@@ -53,8 +53,10 @@ class LaZagne(PupyModule):
 
     @classmethod
     def init_argparse(cls):
-        header = '|====================================================================|\n'
-        header += '|                                                                    |\n'
+        header = (
+            '|====================================================================|\n'
+            + '|                                                                    |\n'
+        )
         header += '|                        The LaZagne Project                         |\n'
         header += '|                                                                    |\n'
         header += '|                          ! BANG BANG !                             |\n'
@@ -119,20 +121,22 @@ class LaZagne(PupyModule):
                 if type(user) == str:
                     user = user.decode('utf-8', errors='replace')
 
-                self.log(Color(u'\n########## User: {} ##########'.format(user), 'yellow'))
+                self.log(Color(f'\n########## User: {user} ##########', 'yellow'))
 
             elif r[2]:
                 passwordsFound = True
                 try:
                     self.print_results(r[0], r[1], r[2], db)
                 except Exception as e:
-                    self.error('{}: {}: {}'.format(r[1], e, traceback.format_exc()))
+                    self.error(f'{r[1]}: {e}: {traceback.format_exc()}')
 
         if not passwordsFound:
             self.warning('no passwords found !')
 
     def print_module_title(self, module):
-        self.log(Color(u'\n------------------- {} -------------------'.format(module), 'yellow'))
+        self.log(
+            Color(f'\n------------------- {module} -------------------', 'yellow')
+        )
         self.log(NewLine())
 
     # print hex value
@@ -156,12 +160,14 @@ class LaZagne(PupyModule):
             for pwd in cred:
                 try:
                     user, rid, lm, nt, _, _, _ = pwd.split(':')
-                    results.append({
-                        'Category': 'hashdump',
-                        'CredType': 'hash',
-                        'Login': user,
-                        'Hash': '%s:%s' % (str(lm), str(nt))
-                    })
+                    results.append(
+                        {
+                            'Category': 'hashdump',
+                            'CredType': 'hash',
+                            'Login': user,
+                            'Hash': f'{str(lm)}:{str(nt)}',
+                        }
+                    )
                 except Exception:
                     pass
 
@@ -174,12 +180,14 @@ class LaZagne(PupyModule):
             for pwd in cred[0]:
                 try:
                     user, d, dn, h = pwd.split(':')
-                    results.append({
-                        'Category': 'cachedump',
-                        'CredType': 'hash',
-                        'Login': user,
-                        'Hash': '%s:%s:%s:%s' % (user.lower(), h.encode('hex'), d.lower(), dn.lower())
-                    })
+                    results.append(
+                        {
+                            'Category': 'cachedump',
+                            'CredType': 'hash',
+                            'Login': user,
+                            'Hash': f"{user.lower()}:{h.encode('hex')}:{d.lower()}:{dn.lower()}",
+                        }
+                    )
                 except Exception:
                     pass
 
@@ -191,8 +199,8 @@ class LaZagne(PupyModule):
             parts = ntpath.abspath(filename).split('\\')
             # Common format
             if len(parts) == 8 and parts[1].lower() == 'users' and \
-              parts[3].lower() == 'appdata':
-                filename = u'{}:{}'.format(parts[2], parts[-1])
+                  parts[3].lower() == 'appdata':
+                filename = f'{parts[2]}:{parts[-1]}'
                 cred['File'] = filename
 
             for field in ('Username', 'Domain', 'Password'):
@@ -235,7 +243,7 @@ class LaZagne(PupyModule):
                     result[c] = cred[c].strip()
 
                     for t, name in self.TYPESMAP.iteritems():
-                        if t in set([x.lower() for x in result]):
+                        if t in {x.lower() for x in result}:
                             result['CredType'] = name
 
                     if not result.get('CredType'):
@@ -265,20 +273,15 @@ class LaZagne(PupyModule):
         return data, columns
 
     def try_utf8(self, value):
-        if type(value) == unicode:
-            try:
-                return value.encode('utf-8')
-            except:
-                return value.encode('latin1', errors='ignore')
-        else:
+        if type(value) != unicode:
             return str(value)
+        try:
+            return value.encode('utf-8')
+        except:
+            return value.encode('latin1', errors='ignore')
 
     def filter_same(self, creds):
-        return [
-            dict(t) for t in frozenset([
-                tuple(d.items()) for d in creds
-            ])
-        ]
+        return [dict(t) for t in frozenset(tuple(d.items()) for d in creds)]
 
     def print_lsa(self, creds):
         for cred in creds:
@@ -295,7 +298,7 @@ class LaZagne(PupyModule):
             self.error(str(creds))
             return
 
-        if not creds or all(not cred for cred in creds):
+        if not creds or not any(creds):
             return
 
         self.print_module_title(module)
@@ -306,20 +309,19 @@ class LaZagne(PupyModule):
 
         if module.lower() == 'lsa_secrets':
             self.print_lsa(creds)
-        else:
-            if module not in self.NON_TABLE:
-                self.table(
-                    *self.prepare_fields(
-                        creds, remove=self.FILTER_COLUMNS))
-            else:
-                for cred in creds:
-                    self.table([
-                        {
-                            'KEY':self.try_utf8(k),
-                            'VALUE':self.try_utf8(v)
-                        } for k, v in cred.iteritems() if k not in self.FILTER_COLUMNS
-                    ], ['KEY', 'VALUE'], truncate=True, legend=False, vspace=1)
+        elif module in self.NON_TABLE:
+            for cred in creds:
+                self.table([
+                    {
+                        'KEY':self.try_utf8(k),
+                        'VALUE':self.try_utf8(v)
+                    } for k, v in cred.iteritems() if k not in self.FILTER_COLUMNS
+                ], ['KEY', 'VALUE'], truncate=True, legend=False, vspace=1)
 
+        else:
+            self.table(
+                *self.prepare_fields(
+                    creds, remove=self.FILTER_COLUMNS))
         try:
             db.add(creds)
         except Exception:

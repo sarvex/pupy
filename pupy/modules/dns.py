@@ -31,12 +31,11 @@ class DNS(PupyModule):
 
             try:
                 address = str(IPAddress(target))
-                self.log('Resolve IP: {}'.format(target))
-                hostname = launch_reverse_ip_resolver(address)
-                if hostname:
-                    self.success('{}: {}'.format(address, hostname))
+                self.log(f'Resolve IP: {target}')
+                if hostname := launch_reverse_ip_resolver(address):
+                    self.success(f'{address}: {hostname}')
                 else:
-                    self.error('{}: Not found'.format(address))
+                    self.error(f'{address}: Not found')
                 add_space = True
                 continue
             except (ValueError, AddrFormatError):
@@ -45,11 +44,10 @@ class DNS(PupyModule):
             try:
                 network = IPNetwork(target)
                 objects = []
-                self.log('Resolve Net: {} (size={})'.format(target, len(network)))
+                self.log(f'Resolve Net: {target} (size={len(network)})')
                 for ip in network:
                     ip = str(ip)
-                    rip = launch_reverse_ip_resolver(ip)
-                    if rip:
+                    if rip := launch_reverse_ip_resolver(ip):
                         objects.append({
                             'IP': ip,
                             'HOSTNAME': rip
@@ -62,25 +60,26 @@ class DNS(PupyModule):
             except AddrFormatError:
                 pass
 
-            self.log('Resolve hostname: {}'.format(target))
+            self.log(f'Resolve hostname: {target}')
             known = set()
             found = False
 
             for k,v in launch_dns_ip_resolver(target).iteritems():
-                if v and not type(v) == str:
-                    v = [x for x in v if x not in known]
-                    for x in v:
-                        known.add(x)
-                elif v:
-                    known.add(v)
+                if v:
+                    if type(v) != str:
+                        v = [x for x in v if x not in known]
+                        for x in v:
+                            known.add(x)
+                    else:
+                        known.add(v)
 
                 if not v:
                     continue
 
-                self.success('{}: {}'.format(k, v if type(v) is str else ','.join(v)))
+                self.success(f"{k}: {v if type(v) is str else ','.join(v)}")
                 found = True
 
             if not found:
-                self.error('{}: Not found'.format(target))
+                self.error(f'{target}: Not found')
 
             add_space = True

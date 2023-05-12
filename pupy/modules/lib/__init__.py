@@ -24,12 +24,9 @@ def file_timestamp(timestamp, time=False):
         return '00/00/00'
 
 def to_utf8(value):
-    if type(value) == unicode:
+    if type(value) == unicode or type(value) != str:
         return value
-    elif type(value) == str:
-        try:
-            return value.decode('utf-8')
-        except:
-            return value.decode('latin1', errors='ignore')
-    else:
-        return value
+    try:
+        return value.decode('utf-8')
+    except:
+        return value.decode('latin1', errors='ignore')

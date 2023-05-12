@@ -28,9 +28,7 @@ logger = getLogger('proxies')
 
 PROXY_RE = r'(?:(?P<schema>[a-z45]+)://)?(?:(?P<user>\w+):?(?P<password>\w*)@)?(?P<proxy_addr>\S+:[0-9]+)/*'
 
-PROXY_MATCHER = re.compile(
-    r'^{}$'.format(PROXY_RE)
-)
+PROXY_MATCHER = re.compile(f'^{PROXY_RE}$')
 
 PROXY_ENV = [
     'http_proxy', 'https_proxy', 'rsync_proxy', 'all_proxy',
@@ -114,10 +112,9 @@ def get_win_proxies():
 
         aKey = None
         try:
-            key = '{}\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings'.format(user)
+            key = f'{user}\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings'
             aKey = OpenKey(HKEY_USERS, key, 0, KEY_QUERY_VALUE)
-            value = QueryValueEx(aKey, 'ProxyServer')[0]
-            if value:
+            if value := QueryValueEx(aKey, 'ProxyServer')[0]:
                 for p in parse_win_proxy(value):
                     if p not in duplicates:
                         logger.debug('Proxy found via Internet Settings: %s', p)
@@ -174,19 +171,13 @@ def parse_env_proxies(var):
         return
 
     schema, user, passwd, proxy = match.groups()
-    for proxy in _normalize_env_proxies(schema, user, passwd, proxy):
-        yield proxy
+    yield from _normalize_env_proxies(schema, user, passwd, proxy)
 
 
 def get_env_proxies():
     for env in PROXY_ENV:
-        var = os.environ.get(env)
-
-        if not var:
-            continue
-
-        for proxy in parse_env_proxies(var):
-            yield proxy
+        if var := os.environ.get(env):
+            yield from parse_env_proxies(var)
 
 
 def _try_read(path):
@@ -203,13 +194,10 @@ def _get_profile_files_content():
         profile_d = []
 
     for profile_file in profile_d:
-        content = _try_read(
-            os.path.join('/etc/profile.d', profile_file))
-        if content:
+        if content := _try_read(os.path.join('/etc/profile.d', profile_file)):
             yield content
 
-    content = _try_read('/etc/profile')
-    if content:
+    if content := _try_read('/etc/profile'):
         yield content
 
     try:
@@ -218,9 +206,7 @@ def _get_profile_files_content():
         apt_d = []
 
     for apt_file in apt_d:
-        content = _try_read(os.path.join(
-            '/etc/apt/apt.conf.d', apt_file))
-        if content:
+        if content := _try_read(os.path.join('/etc/apt/apt.conf.d', apt_file)):
             yield content
 
     try:
@@ -230,16 +216,14 @@ def _get_profile_files_content():
 
     for user in pwd.getpwall():
         for profile in ('.bashrc', '.profile'):
-            content = _try_read(os.path.join(user.pw_dir, profile))
-            if content:
+            if content := _try_read(os.path.join(user.pw_dir, profile)):
                 yield content
 
 
 def get_profile_proxies():
     for content in _get_profile_files_content():
         for match in PROFILE_MATCHER.findall(content):
-            for proxy in _normalize_env_proxies(*match):
-                yield proxy
+            yield from _normalize_env_proxies(*match)
 
 
 def gio_init():
@@ -383,10 +367,8 @@ def parse_proxy(proxy_str):
         yield proxy_str
     elif hasattr(proxy_str, 'as_tuple'):
         yield Proxy(*proxy_str.as_tuple())
-    # HTTP:login:password@ip:port
     elif '://' in proxy_str:
-        for proxy in parse_env_proxies(proxy_str):
-            yield proxy
+        yield from parse_env_proxies(proxy_str)
     else:
         #HTTP:ip:port OR HTTP:ip:[port:]login:password
         parts = proxy_str.split(':')
@@ -404,34 +386,21 @@ def parse_proxy(proxy_str):
         else:
             proxy_type, address, port = parts
 
-        yield Proxy(
-            proxy_type.upper(), address+':'+port, login, password
-        )
+        yield Proxy(proxy_type.upper(), f'{address}:{port}', login, password)
 
 
 def get_proxies():
     if LAST_PROXY is not None:
         yield LAST_PROXY
 
-    for proxy in get_python_proxies():
-        yield proxy
-
-    for proxy in get_env_proxies():
-        yield proxy
-
+    yield from get_python_proxies()
+    yield from get_env_proxies()
     if os.name == 'nt':
-        for proxy in get_win_proxies():
-            yield proxy
-
+        yield from get_win_proxies()
     elif os.name == 'posix':
-        for proxy in get_profile_proxies():
-            yield proxy
-
-        for proxy in get_gio_proxies():
-            yield proxy
-
-    for proxy in get_processes_proxies():
-        yield proxy
+        yield from get_profile_proxies()
+        yield from get_gio_proxies()
+    yield from get_processes_proxies()
 
 
 def _check_proxy_info(proxy_info):
@@ -456,10 +425,9 @@ def _check_proxy_info(proxy_info):
 def find_default_proxy():
     global LAST_PROXY, LAST_PROXY_TIME
 
-    if LAST_PROXY_TIME is not None:
-        if time.time() - LAST_PROXY_TIME < 3600:
-            logger.debug('Cached default proxy: %s', LAST_PROXY)
-            return LAST_PROXY
+    if LAST_PROXY_TIME is not None and time.time() - LAST_PROXY_TIME < 3600:
+        logger.debug('Cached default proxy: %s', LAST_PROXY)
+        return LAST_PROXY
 
     logger.debug('Refresh required')
 
@@ -561,10 +529,7 @@ def is_proxiable(chain, transport_info):
     if _is_native_for(chain, transport_info.transport):
         return True
 
-    if not issubclass(transport_info.transport.client, PupyTCPClient):
-        return False
-
-    return True
+    return issubclass(transport_info.transport.client, PupyTCPClient)
 
 
 def find_proxies(url=None, auth=True):
@@ -582,9 +547,7 @@ def find_proxies(url=None, auth=True):
 
             yield proxy_info
 
-    # Try proxies which works
-    proxy_info = find_default_proxy()
-    if proxy_info:
+    if proxy_info := find_default_proxy():
         if auth:
             find_auth(proxy_info)
 
@@ -608,7 +571,7 @@ def make_args_for_transport_info(transport_info, host_info, chain):
 
     if chostname is not None and chostname != chost:
         if ':' in chostname:
-            chostname = '[' + chostname + ']'
+            chostname = f'[{chostname}]'
 
         transport_args['host'] = chostname
 
@@ -632,9 +595,7 @@ def make_args_for_transport_info(transport_info, host_info, chain):
         elif client is PupySSLClient:
             client = PupyProxifiedSSLClient
         else:
-            raise ValueError(
-                'Proxification for {} is not implemented'.format(
-                    client))
+            raise ValueError(f'Proxification for {client} is not implemented')
 
     transport_args['proxy'] = True
     if first.password or first.username:
@@ -652,8 +613,7 @@ def _parse_proxies(proxies):
         return
 
     for proxy in proxies:
-        for parsed_proxy in parse_proxy(proxy):
-            yield parsed_proxy
+        yield from parse_proxy(proxy)
 
 
 def find_proxies_for_transport(
@@ -669,11 +629,10 @@ def find_proxies_for_transport(
         if wpad:
             uri_host = host
             if ':' in host:
-                uri_host = '[' + host + ']'
-            wpad_uri = 'tcp://{}:{}'.format(uri_host, port)
+                uri_host = f'[{host}]'
+            wpad_uri = f'tcp://{uri_host}:{port}'
             if 'HTTP' in transport_info.transport.internal_proxy_impl:
-                wpad_uri = 'http://{}{}'.format(
-                    uri_host, ':{}'.format(port) if port != 80 else '')
+                wpad_uri = f"http://{uri_host}{f':{port}' if port != 80 else ''}"
 
         for lan_proxy in find_proxies(wpad_uri):
             chain = []
@@ -727,7 +686,7 @@ def find_proxies_for_transport(
 
 
 def _is_native_for(proxies, transport):
-    if not proxies or not len(proxies) == 1:
+    if not proxies or len(proxies) != 1:
         return False
 
     first_proxy = proxies[0]

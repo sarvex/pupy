@@ -49,7 +49,7 @@ class Pywerview(PupyModule):
 
         # Parser for the get-adobject command
         get_adobject_parser= subparsers.add_parser('get-adobject', help='Takes a domain SID, '\
-            'samAccountName or name, and return the associated object', parents=[ad_parser])
+                'samAccountName or name, and return the associated object', parents=[ad_parser])
         get_adobject_parser.add_argument('--sid', dest='queried_sid',
                 help='SID to query (wildcards accepted)')
         get_adobject_parser.add_argument('--sam-account-name', dest='queried_sam_account_name',
@@ -64,7 +64,7 @@ class Pywerview(PupyModule):
 
         # Parser for the get-netuser command
         get_netuser_parser= subparsers.add_parser('get-netuser', help='Queries information about '\
-            'a domain user', parents=[ad_parser])
+                'a domain user', parents=[ad_parser])
         get_netuser_parser.add_argument('--username', dest='queried_username',
                 help='Username to query (wildcards accepted)')
         get_netuser_parser.add_argument('-d', '--domain', dest='queried_domain',
@@ -83,7 +83,7 @@ class Pywerview(PupyModule):
 
         # Parser for the get-netgroup command
         get_netgroup_parser= subparsers.add_parser('get-netgroup', help='Get a list of all current '\
-            'domain groups, or a list of groups a domain user is member of', parents=[ad_parser])
+                'domain groups, or a list of groups a domain user is member of', parents=[ad_parser])
         get_netgroup_parser.add_argument('--groupname', dest='queried_groupname',
                 default='*', help='Group to query (wildcards accepted)')
         get_netgroup_parser.add_argument('--sid', dest='queried_sid',
@@ -102,7 +102,7 @@ class Pywerview(PupyModule):
 
         # Parser for the get-netcomputer command
         get_netcomputer_parser= subparsers.add_parser('get-netcomputer', help='Queries informations about '\
-            'domain computers', parents=[ad_parser])
+                'domain computers', parents=[ad_parser])
         get_netcomputer_parser.add_argument('--computername', dest='queried_computername',
                 default='*', help='Computer name to query')
         get_netcomputer_parser.add_argument('-os', '--operating-system', dest='queried_os',
@@ -127,14 +127,14 @@ class Pywerview(PupyModule):
 
         # Parser for the get-netdomaincontroller command
         get_netdomaincontroller_parser= subparsers.add_parser('get-netdomaincontroller', help='Get a list of '\
-            'domain controllers for the given domain', parents=[ad_parser])
+                'domain controllers for the given domain', parents=[ad_parser])
         get_netdomaincontroller_parser.add_argument('-d', '--domain', dest='queried_domain',
                 help='Domain to query')
         get_netdomaincontroller_parser.set_defaults(func='get_netdomaincontroller')
 
         # Parser for the get-netfileserver command
         get_netfileserver_parser= subparsers.add_parser('get-netfileserver', help='Return a list of '\
-            'file servers, extracted from the domain users\' homeDirectory, scriptPath, and profilePath fields', parents=[ad_parser])
+                'file servers, extracted from the domain users\' homeDirectory, scriptPath, and profilePath fields', parents=[ad_parser])
         get_netfileserver_parser.add_argument('--target-users', nargs='+',
                 metavar='TARGET_USER', help='A list of users to target to find file servers (wildcards accepted)')
         get_netfileserver_parser.add_argument('-d', '--domain', dest='queried_domain',
@@ -143,7 +143,7 @@ class Pywerview(PupyModule):
 
         # Parser for the get-dfsshare command
         get_dfsshare_parser= subparsers.add_parser('get-dfsshare', help='Return a list of '\
-            'all fault tolerant distributed file systems for a given domain', parents=[ad_parser])
+                'all fault tolerant distributed file systems for a given domain', parents=[ad_parser])
         get_dfsshare_parser.add_argument('-d', '--domain', dest='queried_domain',
                 help='Domain to query')
         get_dfsshare_parser.add_argument('-v', '--version', nargs='+', choices=['v1', 'v2'],
@@ -154,7 +154,7 @@ class Pywerview(PupyModule):
 
         # Parser for the get-netou command
         get_netou_parser= subparsers.add_parser('get-netou', help='Get a list of all current '\
-            'OUs in the domain', parents=[ad_parser])
+                'OUs in the domain', parents=[ad_parser])
         get_netou_parser.add_argument('--ouname', dest='queried_ouname',
                 default='*', help='OU name to query (wildcards accepted)')
         get_netou_parser.add_argument('--guid', dest='queried_guid',
@@ -169,7 +169,7 @@ class Pywerview(PupyModule):
 
         # Parser for the get-netsite command
         get_netsite_parser= subparsers.add_parser('get-netsite', help='Get a list of all current '\
-            'sites in the domain', parents=[ad_parser])
+                'sites in the domain', parents=[ad_parser])
         get_netsite_parser.add_argument('--sitename', dest='queried_sitename',
                 help='Site name to query (wildcards accepted)')
         get_netsite_parser.add_argument('--guid', dest='queried_guid',
@@ -184,7 +184,7 @@ class Pywerview(PupyModule):
 
         # Parser for the get-netsubnet command
         get_netsubnet_parser= subparsers.add_parser('get-netsubnet', help='Get a list of all current '\
-            'subnets in the domain', parents=[ad_parser])
+                'subnets in the domain', parents=[ad_parser])
         get_netsubnet_parser.add_argument('--sitename', dest='queried_sitename',
                 help='Only return subnets for the specified site name (wildcards accepted)')
         get_netsubnet_parser.add_argument('-d', '--domain', dest='queried_domain',
@@ -197,7 +197,7 @@ class Pywerview(PupyModule):
 
         # Parser for the get-netgpo command
         get_netgpo_parser= subparsers.add_parser('get-netgpo', help='Get a list of all current '\
-            'GPOs in the domain', parents=[ad_parser])
+                'GPOs in the domain', parents=[ad_parser])
         get_netgpo_parser.add_argument('--gponame', dest='queried_gponame',
                 default='*', help='GPO name to query for (wildcards accepted)')
         get_netgpo_parser.add_argument('--displayname', dest='queried_displayname',
@@ -222,19 +222,19 @@ class Pywerview(PupyModule):
                 help='If the group member is a group, try to resolve its members as well')
         get_netgroupmember_parser.add_argument('--use-matching-rule', action='store_true',
                 help='Use LDAP_MATCHING_RULE_IN_CHAIN in the LDAP search query when -Recurse is specified.\n' \
-            'Much faster than manual recursion, but doesn\'t reveal cross-domain groups')
+                'Much faster than manual recursion, but doesn\'t reveal cross-domain groups')
         get_netgroupmember_parser.add_argument('--full-data', action='store_true',
                 help='If set, returns full information on the members')
         get_netgroupmember_parser.set_defaults(func='get_netgroupmember')
 
         # Parser for the get-netsession command
         get_netsession_parser= subparsers.add_parser('get-netsession', help='Queries a host to return a '\
-            'list of active sessions on the host (you can use local credentials instead of domain credentials)', parents=[target_parser])
+                'list of active sessions on the host (you can use local credentials instead of domain credentials)', parents=[target_parser])
         get_netsession_parser.set_defaults(func='get_netsession')
 
         #Parser for the get-localdisks command
         get_localdisks_parser = subparsers.add_parser('get-localdisks', help='Queries a host to return a '\
-            'list of active disks on the host (you can use local credentials instead of domain credentials)', parents=[target_parser])
+                'list of active disks on the host (you can use local credentials instead of domain credentials)', parents=[target_parser])
         get_localdisks_parser.set_defaults(func='get_localdisks')
 
         #Parser for the get-netdomain command
@@ -244,20 +244,20 @@ class Pywerview(PupyModule):
 
         # Parser for the get-netshare command
         get_netshare_parser= subparsers.add_parser('get-netshare', help='Queries a host to return a '\
-            'list of available shares on the host (you can use local credentials instead of domain credentials)', parents=[target_parser])
+                'list of available shares on the host (you can use local credentials instead of domain credentials)', parents=[target_parser])
         get_netshare_parser.set_defaults(func='get_netshare')
 
         # Parser for the get-netloggedon command
         get_netloggedon_parser= subparsers.add_parser('get-netloggedon', help='This function will '\
-            'execute the NetWkstaUserEnum RPC call ti query a given host for actively logged on '\
-            'users', parents=[target_parser])
+                'execute the NetWkstaUserEnum RPC call ti query a given host for actively logged on '\
+                'users', parents=[target_parser])
         get_netloggedon_parser.set_defaults(func='get_netloggedon')
 
         # Parser for the get-netlocalgroup command
         get_netlocalgroup_parser= subparsers.add_parser('get-netlocalgroup', help='Gets a list of '\
-            'members of a local group on a machine, or returns every local group. You can use local '\
-            'credentials instead of domain credentials, however, domain credentials are needed to '\
-            'resolve domain SIDs.', parents=[target_parser])
+                'members of a local group on a machine, or returns every local group. You can use local '\
+                'credentials instead of domain credentials, however, domain credentials are needed to '\
+                'resolve domain SIDs.', parents=[target_parser])
         get_netlocalgroup_parser.add_argument('--groupname', dest='queried_groupname',
                 help='Group to list the members of (defaults to the local \'Administrators\' group')
         get_netlocalgroup_parser.add_argument('--list-groups', action='store_true',
@@ -270,14 +270,19 @@ class Pywerview(PupyModule):
 
         # Parser for the invoke-checklocaladminaccess command
         invoke_checklocaladminaccess_parser = subparsers.add_parser('invoke-checklocaladminaccess', help='Checks '\
-                'if the given user has local admin access on the given host', parents=[target_parser])
+                    'if the given user has local admin access on the given host', parents=[target_parser])
         invoke_checklocaladminaccess_parser.set_defaults(func='invoke_checklocaladminaccess')
 
         # Parser for the invoke-userhunter command
         invoke_userhunter_parser = subparsers.add_parser('invoke-userhunter', help='Finds '\
-                'which machines domain users are logged into', parents=[ad_parser])
-        invoke_userhunter_parser.add_argument('--computername', dest='queried_computername',
-                nargs='+', default=list(), help='Host to enumerate against')
+                    'which machines domain users are logged into', parents=[ad_parser])
+        invoke_userhunter_parser.add_argument(
+            '--computername',
+            dest='queried_computername',
+            nargs='+',
+            default=[],
+            help='Host to enumerate against',
+        )
         invoke_userhunter_parser.add_argument('--computerfile', dest='queried_computerfile',
                 type=FileType('r'), help='File of hostnames/IPs to search')
         invoke_userhunter_parser.add_argument('--computer-adspath', dest='queried_computeradspath',
@@ -302,7 +307,7 @@ class Pywerview(PupyModule):
                 help='Query only users with adminCount=1')
         invoke_userhunter_parser.add_argument('--allow-delegation', action='store_true',
                 help='Return user accounts that are not marked as \'sensitive and '\
-                        'not allowed for delegation\'')
+                            'not allowed for delegation\'')
         invoke_userhunter_parser.add_argument('--stop-on-success', action='store_true',
                 help='Stop hunting after finding target user')
         invoke_userhunter_parser.add_argument('--check-access', action='store_true',
@@ -314,8 +319,8 @@ class Pywerview(PupyModule):
         invoke_userhunter_parser.add_argument('--stealth-source', nargs='+', choices=['dfs', 'dc', 'file'],
                 default=['dfs', 'dc', 'file'],
                 help='The source of target servers to use, '\
-            '\'dfs\' (distributed file server), \'dc\' (domain controller), '\
-            'or \'file\' (file server) (default: all)')
+                '\'dfs\' (distributed file server), \'dc\' (domain controller), '\
+                'or \'file\' (file server) (default: all)')
         invoke_userhunter_parser.add_argument('--show-all', action='store_true',
                 help='Return all user location results')
         invoke_userhunter_parser.add_argument('--foreign-users', action='store_true',

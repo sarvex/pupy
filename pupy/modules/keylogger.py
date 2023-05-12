@@ -80,7 +80,7 @@ class KeyloggerModule(PupyModule):
             else:
                 filepath = self.config.get_file('keystrokes', {'%c': self.client.short_name()})
 
-                self.success("dumping recorded keystrokes in %s"%filepath)
+                self.success(f"dumping recorded keystrokes in {filepath}")
                 self.log(data)
 
                 with open(filepath, 'w') as f:
@@ -94,9 +94,7 @@ class KeyloggerModule(PupyModule):
             else:
                 keylogger_stop = self.client.remote('keylogger', 'keylogger_stop')
 
-            data = keylogger_stop()
-
-            if data:
+            if data := keylogger_stop():
                 self.log(data)
 
             self.success("keylogger stopped")

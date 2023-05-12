@@ -48,8 +48,7 @@ def mexec(module, path, argv, argv0=None, interactive=False, raw=False, codepage
             complete.set()
             module.error('Launch failed. Press ENTER')
 
+    elif module.mp.run():
+        module.success(f'Process started: {module.mp.pid}')
     else:
-        if module.mp.run():
-            module.success('Process started: {}'.format(module.mp.pid))
-        else:
-            module.error('Launch failed')
+        module.error('Launch failed')

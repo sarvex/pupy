@@ -86,7 +86,7 @@ def create_client_transport_info_for_addr(
         hostname = host
 
     if transport_name not in transports:
-        error('Unregistered transport {}'.format(transport_name), exit=exit)
+        error(f'Unregistered transport {transport_name}', exit=exit)
 
     transport_klass = transports[transport_name]
     transport = transport_klass(bind_payload=bind_payload)
@@ -96,11 +96,9 @@ def create_client_transport_info_for_addr(
 
     if 'host' not in opt_args:
         if ':' in hostname:
-            hostname = '[' + hostname + ']'
+            hostname = f'[{hostname}]'
 
-        transport_args['host'] = '{}{}'.format(
-            hostname, ':{}'.format(port) if port != 80 else ''
-        )
+        transport_args['host'] = f"{hostname}{f':{port}' if port != 80 else ''}"
 
     for key, value in opt_args.iteritems():
         if key in client_args:
@@ -108,6 +106,6 @@ def create_client_transport_info_for_addr(
         elif key in transport_args:
             transport_args[key] = value
         else:
-            error('Unknown transport argument: {}'.format(key), exit=exit)
+            error(f'Unknown transport argument: {key}', exit=exit)
 
     return TransportInfo(host, port, transport, transport_args, client_args)

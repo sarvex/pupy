@@ -30,4 +30,4 @@ def init_winpcap(client):
 
     PATH = getenv('Path')
     if 'NPcap' not in PATH:
-        environ['Path'] = PATH + ';' + windir+r'\system32\NPcap'
+        environ['Path'] = f'{PATH};{windir}' + r'\system32\NPcap'

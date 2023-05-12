@@ -36,11 +36,9 @@ from Crypto.Util.py3compat import byte_string
 #
 
 import imp
-extension_suffixes = []
-for ext, mod, typ in imp.get_suffixes():
-    if typ == imp.C_EXTENSION:
-        extension_suffixes.append(ext)
-
+extension_suffixes = [
+    ext for ext, mod, typ in imp.get_suffixes() if typ == imp.C_EXTENSION
+]
 _buffer_type = (bytearray, memoryview)
 
 class _VoidPointer(object):
@@ -74,7 +72,7 @@ def load_lib(name, cdecl):
     if "." not in name and not linkage.startswith("Win"):
         full_name = find_library(name)
         if full_name is None:
-            raise OSError("Cannot load library '%s'" % name)
+            raise OSError(f"Cannot load library '{name}'")
         name = full_name
     return CDLL(name)
 
@@ -120,7 +118,7 @@ def c_uint8_ptr(data):
         buffer_type = c_ubyte * buf.len
         return buffer_type.from_address(buf.buf)
     else:
-        raise TypeError("Object type %s cannot be passed to C code" % type(data))
+        raise TypeError(f"Object type {type(data)} cannot be passed to C code")
 
 # ---
 

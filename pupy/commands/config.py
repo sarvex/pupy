@@ -45,13 +45,14 @@ def do(server, handler, config, args):
             if args.section and args.section != section:
                 continue
 
-            result.append('[{}]'.format(section))
+            result.append(f'[{section}]')
             if args.sections:
                 continue
 
-            for variable in config.options(section):
-                result.append('{} = {}'.format(variable, config.get(section, variable)))
-
+            result.extend(
+                f'{variable} = {config.get(section, variable)}'
+                for variable in config.options(section)
+            )
             result.append('')
 
         handler.display(Pygment(IniLexer(), '\n'.join(result)))

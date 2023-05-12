@@ -23,8 +23,7 @@ class Rdp(PupyModule):
     @classmethod
     def init_argparse(cls):
 
-        example = 'Examples:\n'
-        example += '>> run rdp local --enable\n'
+        example = 'Examples:\n' + '>> run rdp local --enable\n'
         example += '>> run rdp local --disable\n'
         example += '>> run rdp remote -u john -p P4ssw0rd 192.168.0.1,192.168.1.2,192.168.3.0/24\n'
 

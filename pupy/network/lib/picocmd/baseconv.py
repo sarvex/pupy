@@ -40,12 +40,13 @@ Sample usage::
 """
 
 
+
 BASE2_ALPHABET = '01'
 BASE16_ALPHABET = '0123456789ABCDEF'
 BASE36_ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyz'
 BASE56_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz'
 BASE62_ALPHABET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
-BASE64_ALPHABET = BASE62_ALPHABET + '-_'
+BASE64_ALPHABET = f'{BASE62_ALPHABET}-_'
 
 
 class BaseConverter(object):
@@ -87,15 +88,11 @@ class BaseConverter(object):
 
     def encode(self, number):
         neg, value = self._convert(number, self.decimal_digits, self.digits)
-        if neg:
-            return self.sign + value
-        return value
+        return self.sign + value if neg else value
 
     def decode(self, number):
         neg, value = self._convert(number, self.digits, self.decimal_digits)
-        if neg:
-            return self.sign + value
-        return value
+        return self.sign + value if neg else value
 
 
 base2 = BaseConverter(BASE2_ALPHABET)
@@ -116,10 +113,10 @@ if __name__ == '__main__':
     for converter in [base2, base16, base36, base56, base62, base64]:
         if converter.sign == '-':
             for i in nums:
-                assert i == int(converter.decode(converter.encode(i))), '%s failed' % i
+                assert i == int(converter.decode(converter.encode(i))), f'{i} failed'
         else:
             for i in nums:
                 i = str(i)
                 if i[0] == '-':
                     i = converter.sign + i[1:]
-                assert i == converter.decode(converter.encode(i)), '%s failed' % i
+                assert i == converter.decode(converter.encode(i)), f'{i} failed'

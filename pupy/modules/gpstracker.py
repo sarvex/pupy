@@ -77,9 +77,8 @@ def generateKML(deviceName, traces, outputFile):
         kmlPlacemarks += aKmlPlacemark+"\n"
         lastPlace = aPlace
     kmlData = kmlData.replace("MY_PLACEMARKS", "\n"+kmlPlacemarks)
-    f = open(outputFile, 'w')
-    f.write(kmlData)
-    f.close()
+    with open(outputFile, 'w') as f:
+        f.write(kmlData)
 
 @config(cat="gather", compat=["android"])
 class gpstracker(PupyModule):

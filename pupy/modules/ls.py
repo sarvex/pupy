@@ -28,10 +28,7 @@ T_HAS_XATTR = 14
 # TODO: Rewrite using tables
 
 def to_str(x):
-    if type(x) in (str, unicode):
-        return to_utf8(x)
-
-    return str(x)
+    return to_utf8(x) if type(x) in (str, unicode) else str(x)
 
 def output_format(file, windows=False, archive=None, time=False, uid_len=0, gid_len=0):
     if file[T_TYPE] == 'X':
@@ -48,10 +45,11 @@ def output_format(file, windows=False, archive=None, time=False, uid_len=0, gid_
         out = u'  {}{}{}{}{}{}'.format(
             timestamp_field.format(file_timestamp(file[T_TIMESTAMP], time)),
             u'{:<2}'.format(file[T_TYPE] + ('+' if file[T_HAS_XATTR] else '')),
-            to_str(file[T_UID]).rjust(uid_len+1)+u' ' if uid_len else u'',
-            to_str(file[T_GID]).rjust(gid_len+1)+u' ' if gid_len else u'',
+            f'{to_str(file[T_UID]).rjust(uid_len + 1)} ' if uid_len else u'',
+            f'{to_str(file[T_GID]).rjust(gid_len + 1)} ' if gid_len else u'',
             u'{:>9}'.format(size_human_readable(file[T_SIZE])),
-            u' {:<40}'.format(name))
+            u' {:<40}'.format(name),
+        )
     else:
         if not uid_len:
             uid_len = 5
@@ -62,11 +60,12 @@ def output_format(file, windows=False, archive=None, time=False, uid_len=0, gid_
         out = u'  {}{}{}{}{}{}{}'.format(
             timestamp_field.format(file_timestamp(file[T_TIMESTAMP], time)),
             u'{:<2}'.format(file[T_TYPE] + ('+' if file[T_HAS_XATTR] else '')),
-            to_str(file[T_UID]).rjust(uid_len+1)+' ',
-            to_str(file[T_GID]).rjust(gid_len+1)+' ',
+            f'{to_str(file[T_UID]).rjust(uid_len + 1)} ',
+            f'{to_str(file[T_GID]).rjust(gid_len + 1)} ',
             u'{:04o} '.format(file[T_MODE] & 0o7777),
             u'{:>9}'.format(size_human_readable(file[T_SIZE])),
-            u' {:<40}'.format(name))
+            u' {:<40}'.format(name),
+        )
 
     if archive:
         out=Color(out, 'yellow')

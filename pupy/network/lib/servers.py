@@ -105,8 +105,8 @@ class PupyTCPServer(ThreadedServer):
                 self.igd_mapping = True
             except UPNPError as e:
                 self.logger.warn(
-                    "Couldn't create IGD mapping [TCP {} -> {}, IP={}]: {}".format(
-                        self.external_port, self.port, self.igd.intIP, e.description))
+                    f"Couldn't create IGD mapping [TCP {self.external_port} -> {self.port}, IP={self.igd.intIP}]: {e.description}"
+                )
 
 
     def _setup_connection(self, sock, queue):
@@ -128,7 +128,7 @@ class PupyTCPServer(ThreadedServer):
             wrapper = sock
 
         # build a connection
-        config = dict(self.protocol_config, credentials=credentials, connid='{}:{}'.format(h, p))
+        config = dict(self.protocol_config, credentials=credentials, connid=f'{h}:{p}')
         stream = self.stream_class(wrapper, self.transport_class, self.transport_kwargs)
         connection = None
 
@@ -158,7 +158,8 @@ class PupyTCPServer(ThreadedServer):
         authentication = Thread(
             target=self._setup_connection,
             args=(sock, queue),
-            name='Authentication Thread ({}:{})'.format(h, p))
+            name=f'Authentication Thread ({h}:{p})',
+        )
         authentication.daemon = True
         authentication.start()
 
@@ -223,7 +224,7 @@ class PupyUDPServer(object):
 
         for param in self.REQUIRED_KWARGS:
             if param not in kwargs:
-                raise ValueError('missing {} argument'.format(param))
+                raise ValueError(f'missing {param} argument')
 
             setattr(self, param, kwargs[param])
             del kwargs[param]
@@ -358,7 +359,7 @@ class PupyUDPServer(object):
         self.dispatcher.delete(addr)
 
     def new(self, addr, ckcp):
-        logging.info("new client connected: " + addr)
+        logging.info(f"new client connected: {addr}")
 
         host, port = addr.rsplit(':', 1)
         port = int(port)

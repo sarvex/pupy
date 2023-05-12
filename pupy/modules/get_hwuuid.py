@@ -23,4 +23,4 @@ class GetHwUuid(PupyModule):
         get_hw_uuid = self.client.remote('hwuuid', 'get_hw_uuid')
 
         method, uuid = get_hw_uuid()
-        self.success('{} ({})'.format(method, uuid))
+        self.success(f'{method} ({uuid})')

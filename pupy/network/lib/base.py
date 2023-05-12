@@ -35,11 +35,10 @@ class BasePupyTransport(object):
         """ return a class with some existing attributes customized """
         for name, value in kwargs.iteritems():
             if name in ["cookie", "upstream", "downstream", "stream"]:
-                raise TransportError("you cannot customize the protected attribute %s"%name)
+                raise TransportError(f"you cannot customize the protected attribute {name}")
             if not hasattr(cls, name):
-                raise TransportError("Transport has no attribute %s"%name)
-        NewSubClass = type('Customized_{}'.format(cls.__name__), (cls,), kwargs)
-        return NewSubClass
+                raise TransportError(f"Transport has no attribute {name}")
+        return type(f'Customized_{cls.__name__}', (cls, ), kwargs)
 
     @classmethod
     def custom(cls, **kwargs):
@@ -95,7 +94,6 @@ class BasePupyTransport(object):
         """
         if hasattr(self, 'receivedUpstream'):
             return self.receivedUpstream(data)
-            """ obfsproxy style alias """
         raise NotImplementedError()
 
 class BaseTransport(BasePupyTransport):
@@ -123,10 +121,10 @@ class TransportWrapper(BasePupyTransport):
     def __init__(self, stream, **kwargs):
         super(TransportWrapper, self).__init__(stream, **kwargs)
 
-        kwargs.update({
+        kwargs |= {
             'upstream_peer': self.upstream.transport.peer,
-            'downstream_peer': self.downstream.transport.peer
-        })
+            'downstream_peer': self.downstream.transport.peer,
+        }
 
         self.chain = [
             klass(None, **kwargs) for klass in self.__class__._linearize()
@@ -146,8 +144,7 @@ class TransportWrapper(BasePupyTransport):
     def _linearize(cls):
         for klass in cls.cls_chain:
             if issubclass(klass, TransportWrapper):
-                for subklass in klass.cls_chain:
-                    yield subklass
+                yield from klass.cls_chain
             else:
                 yield klass
 

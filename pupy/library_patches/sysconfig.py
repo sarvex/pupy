@@ -26,12 +26,11 @@ def get_path(name, scheme=None, vars=None, expand=True):
 
 
 def get_config_vars(*args):
-    if not args:
-        return dict(bundlevars)
-
-    return {
-        k: bundlevars.get(k, None) for k in args
-    }
+    return (
+        {k: bundlevars.get(k, None) for k in args}
+        if args
+        else dict(bundlevars)
+    )
 
 
 def get_config_var(name):

@@ -47,10 +47,7 @@ class PipeCatcher(PupyModule):
             elif not data:
                 self.warning('No data')
             else:
-                data = [
-                    '{} ({})'.format(name, sid) if name != sid
-                    else sid for (name, sid) in data
-                ]
+                data = [f'{name} ({sid})' if name != sid else sid for (name, sid) in data]
                 self.log(List(data))
 
         elif args.action == 'stop':

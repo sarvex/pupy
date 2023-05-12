@@ -42,12 +42,10 @@ def open_key(root, key):
     return None
 
 def subkeys(key,stable=True):
-    if stable: k = 0
-    else: k = 1
+    k = 0 if stable else 1
     sk = (key.SubKeyLists[k]/["pointer", ["_CM_KEY_INDEX"]]).value
     sub_list = []
-    if (sk.Signature.value == LH_SIG or
-            sk.Signature.value == LF_SIG):
+    if sk.Signature.value in [LH_SIG, LF_SIG]:
         sub_list = sk.List
     elif sk.Signature.value == RI_SIG:
         lfs = []
@@ -69,5 +67,4 @@ def values(key):
 def walk(root):
     for k in subkeys(root):
         yield k
-        for j in walk(k):
-            yield j
+        yield from walk(k)

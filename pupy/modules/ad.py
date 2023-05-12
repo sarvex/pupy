@@ -227,10 +227,7 @@ access_mask_flags = OrderedDict([
 
 def _sid(sid):
     value, _ = sid_translations.get(sid, (None, None))
-    if value:
-        return value
-
-    return sid
+    return value if value else sid
 
 
 def json_default(o):
@@ -346,24 +343,17 @@ def formatAttribute(key, att, formatCnAsGroup=False):
     if aname == 'useraccountcontrol':
         return parseFlags(att, uac_flags)
 
-    #Pwd flags
     elif aname == 'pwdproperties':
         return parseFlags(att, pwd_flags)
 
-    #Sam flags
     elif aname == 'samaccounttype':
         return parseFlags(att, sam_flags, False)
 
-    #Domain trust flags
     elif aname == 'trustattributes':
         return parseFlags(att, trust_flags)
 
     elif aname == 'trustdirection':
-        if  att == 0:
-            return 'DISABLED'
-        else:
-            return parseFlags(att, trust_directions, False)
-
+        return 'DISABLED' if att == 0 else parseFlags(att, trust_directions, False)
     elif aname == 'trusttype':
         return parseFlags(att, trust_type)
 
@@ -372,10 +362,10 @@ def formatAttribute(key, att, formatCnAsGroup=False):
         sid = format_sid(att[4:].decode('hex'))
         return _sid(sid)
 
-    elif aname == 'minpwdage' or aname == 'maxpwdage':
+    elif aname in ['minpwdage', 'maxpwdage']:
         return '%.2f days' % nsToDays(att)
 
-    elif aname == 'lockoutobservationwindow' or aname == 'lockoutduration':
+    elif aname in ['lockoutobservationwindow', 'lockoutduration']:
         return '%.1f minutes' % nsToMinutes(att)
 
     elif aname == 'objectguid' and att.startswith('hex:'):
@@ -417,7 +407,7 @@ def from_tuple_deep(obj, format=True):
             k: formatAttribute(k, from_tuple_deep(v)) for (k, v) in data
         }
 
-    elif kind == MAP and not format:
+    elif kind == MAP:
         return {
             k: from_tuple_deep(v) for (k, v) in data
         }
@@ -426,7 +416,7 @@ def from_tuple_deep(obj, format=True):
         return datetime.utcfromtimestamp(data)
 
     else:
-        raise ValueError('Invalid kind ({})'.format(kind))
+        raise ValueError(f'Invalid kind ({kind})')
 
 
 def _get_field(result, field):
@@ -543,26 +533,24 @@ class AD(PupyModule):
 
     def _show_exception(self, e):
         if hasattr(e, 'message') and hasattr(e, 'type'):
-            report = []
             if hasattr(e, 'childs') and e.childs and not isinstance(e.childs, str):
-                for (authentication, ldap_server,
-                        domain, user, _, emessage) in e.childs:
-                    report.append({
+                report = [
+                    {
                         'Method': authentication,
                         'Server': ldap_server,
                         'Domain': domain,
                         'User': user,
-                        'Message': emessage
-                    })
-
+                        'Message': emessage,
+                    }
+                    for authentication, ldap_server, domain, user, _, emessage in e.childs
+                ]
                 self.error(
                     Table(report, [
                         'Method', 'Server', 'Domain', 'User', 'Message'
                     ], caption=e.message)
                 )
             else:
-                self.error('AD Error ({}): {}'.format(
-                    e.type, e.message))
+                self.error(f'AD Error ({e.type}): {e.message}')
         else:
             self.error(e)
 
@@ -635,7 +623,7 @@ class AD(PupyModule):
             )
 
             if realm:
-                self.log('+ ' + realm)
+                self.log(f'+ {realm}')
 
             self.log(
                 Pygment(lexers.JsonLexer(), formatted_json)
@@ -723,7 +711,7 @@ class AD(PupyModule):
 
         i_am, rootdn, childs = result
 
-        self.log(List(childs, caption='Root: {} Whoami: {}'.format(rootdn, i_am)))
+        self.log(List(childs, caption=f'Root: {rootdn} Whoami: {i_am}'))
 
     def bounded(self, args):
         bounded = self.client.remote('ad', 'bounded')
@@ -740,8 +728,6 @@ class AD(PupyModule):
             args.realm, args.global_catalog), False)
         idesc = desc.get('info', {})
 
-        infos = []
-
         versions = idesc.get(
             'supported_ldap_versions', []
         )
@@ -749,22 +735,21 @@ class AD(PupyModule):
         if not hasattr(versions, '__iter__'):
             versions = [versions]
 
-        infos.append(
-            List([
-                'Bind: ' + desc.get('bind', ''),
-                'Root: ' + desc.get('root', ''),
-                'LDAP: ' + desc.get('ldap', ''),
-                'DNS: ' + desc['dns'][4][0] if desc.get('dns', None) else '',
-                'Schema: ' + idesc.get('schema_entry', ''),
-                'Versions: ' + ', '.join(str(version) for version in versions),
-                'SASL Mechs: ' + ', '.join(
-                    mech for mech in idesc.get(
-                        'supported_sasl_mechanisms', []
-                    )
-                )
-            ], caption='Connection')
-        )
-
+        infos = [
+            List(
+                [
+                    'Bind: ' + desc.get('bind', ''),
+                    'Root: ' + desc.get('root', ''),
+                    'LDAP: ' + desc.get('ldap', ''),
+                    'DNS: ' + desc['dns'][4][0] if desc.get('dns', None) else '',
+                    'Schema: ' + idesc.get('schema_entry', ''),
+                    'Versions: ' + ', '.join(str(version) for version in versions),
+                    'SASL Mechs: '
+                    + ', '.join(idesc.get('supported_sasl_mechanisms', [])),
+                ],
+                caption='Connection',
+            )
+        ]
         if desc['ldap_servers']:
             infos.append(
                 Table(
@@ -805,16 +790,11 @@ class AD(PupyModule):
             )
 
         supported = []
-        for table in ('supported_controls',
-                'supported_extensions', 'supported_features'):
-            for oid, klass, name, vendor in idesc[table]:
-                supported.append({
-                    'OID': oid,
-                    'Type': klass,
-                    'Name': name,
-                    'Vendor': vendor
-                })
-
+        for table in ('supported_controls', 'supported_extensions', 'supported_features'):
+            supported.extend(
+                {'OID': oid, 'Type': klass, 'Name': name, 'Vendor': vendor}
+                for oid, klass, name, vendor in idesc[table]
+            )
         if supported:
             infos.append(
                 Table(
@@ -827,12 +807,14 @@ class AD(PupyModule):
 
         if 'other' in idesc:
             infos.append(
-                List(tuple(
-                    '{}: {}'.format(key, value)
-                    for key, value in idesc['other'].iteritems()
-                    if key not in ('supportedLDAPPolicies',)
-                ),
-                caption='Other info')
+                List(
+                    tuple(
+                        f'{key}: {value}'
+                        for key, value in idesc['other'].iteritems()
+                        if key not in ('supportedLDAPPolicies',)
+                    ),
+                    caption='Other info',
+                )
             )
 
         self.log(MultiPart(infos))

@@ -71,7 +71,9 @@ class Mimikatz(MemoryExec):
             mimikatz_path = self.client.pupsrv.config.get("mimikatz","exe_Win32")
 
         if not os.path.isfile(mimikatz_path):
-            self.error("Mimikatz exe %s not found ! please edit Mimikatz section in pupy.conf"%mimikatz_path)
+            self.error(
+                f"Mimikatz exe {mimikatz_path} not found ! please edit Mimikatz section in pupy.conf"
+            )
             return
 
         mimikatz_args = args.args
@@ -82,7 +84,7 @@ class Mimikatz(MemoryExec):
         mimikatz_args.append('exit')
 
         if args.verbose:
-            self.log('Execute: ' + repr(mimikatz_args))
+            self.log(f'Execute: {repr(mimikatz_args)}')
 
         output = exec_pe(self, mimikatz_args, path=mimikatz_path, interactive=False)
         if not output:
@@ -281,7 +283,4 @@ class Mimikatz(MemoryExec):
 
     def validate_ntlm(self, data):
         allowed = re.compile("^[0-9a-f]{32}", re.IGNORECASE)
-        if allowed.match(data):
-            return True
-        else:
-            return False
+        return bool(allowed.match(data))
